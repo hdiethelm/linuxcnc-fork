@@ -391,6 +391,7 @@ public:
     ~FeedRotaryButton();
     virtual bool setKeyCode(const KeyCode& keyCode) override;
     void setStepMode(HandwheelStepmodes::Mode stepMode);
+    void setStepMode_5_10(bool enable);
     HandwheelStepmodes::Mode stepMode() const;
     float stepSize() const;
     bool isPermitted() const override;
@@ -586,7 +587,6 @@ private:
     //! if in Lead mode: if true jog wheel changes the spindle speed, changes the feed override otherwise
     bool         mIsLeadModeSpindle = false;
     bool         mIsLeadModeFeed = false;
-    bool         mIsStepMode_5_10 = false;
 
     float mScale;
     float mMaxVelocity;
