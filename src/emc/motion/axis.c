@@ -390,7 +390,7 @@ void axis_handle_jogwheels(bool motion_teleop_flag, bool motion_enable_flag, boo
         new_ajog_counts = *(axis_data->ajog_counts);
         delta = new_ajog_counts - axis->old_ajog_counts;
         if(axis_num == 0 && delta != 0){
-            printf("Delta %i Lim %f\n", delta, aaccel_limit);
+            printf("delta %i aaccel_limit %f\n", delta, aaccel_limit);
         }
         axis->old_ajog_counts = new_ajog_counts;
         if ( first_pass ) { continue; }
@@ -456,7 +456,9 @@ void axis_sync_teleop_tp_to_carte_pos(int extfactor, double *pcmd_p[])
     for (n = 0; n < EMCMOT_MAX_AXIS; n++) {
         axis_array[n].teleop_tp.curr_pos = *pcmd_p[n]
                             + extfactor * axis_array[n].ext_offset_tp.curr_pos;
-        printf("Sync %i %f\n", n, axis_array[n].teleop_tp.curr_pos);
+        if(n == 0){
+            printf("sync %f\n", axis_array[n].teleop_tp.curr_pos);
+        }
         axis_array[n].teleop_tp.pos_cmd = axis_array[n].teleop_tp.curr_pos;
     }
 }
@@ -679,6 +681,7 @@ static int update_teleop_with_check(int axis_num, simple_tp_t *the_tp, double se
 
 int axis_calc_motion(double servo_period)
 {
+    static bool tmp=false;
     int axis_num;
     int violated_teleop_limit = 0;
     emcmot_axis_t *axis;
@@ -691,14 +694,16 @@ int axis_calc_motion(double servo_period)
         }
         if (update_teleop_with_check(axis_num, &(axis->teleop_tp), servo_period)) {
             violated_teleop_limit = 1;
-            if(axis_num==0){
-                //printf("viol lim");
+            if(axis_num==0 && !tmp){
+                tmp=true;
+                printf("viol lim\n");
             }
         } else {
             axis->teleop_vel_cmd = axis->teleop_tp.curr_vel;
             axis->pos_cmd = axis->teleop_tp.curr_pos;
-            if(axis_num==0){
-                //printf("calc %i %f\n", axis_num, axis->pos_cmd);
+            if(axis_num==0 && tmp){
+                tmp=false;
+                printf("calc %f\n", axis->pos_cmd);
             }
         }
 
