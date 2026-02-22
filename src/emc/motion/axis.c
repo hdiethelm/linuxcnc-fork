@@ -4,6 +4,7 @@
 #include "rtapi.h"
 #include "rtapi_math.h"
 #include "simple_tp.h"
+#include <stdio.h>
 
 typedef struct {
     double pos_cmd;                 /* commanded axis position */
@@ -388,6 +389,9 @@ void axis_handle_jogwheels(bool motion_teleop_flag, bool motion_enable_flag, boo
 
         new_ajog_counts = *(axis_data->ajog_counts);
         delta = new_ajog_counts - axis->old_ajog_counts;
+        if(axis_num == 0 && delta != 0){
+            printf("Delta %i Lim %f\n", delta, aaccel_limit);
+        }
         axis->old_ajog_counts = new_ajog_counts;
         if ( first_pass ) { continue; }
         if ( delta == 0 ) {
@@ -412,6 +416,9 @@ void axis_handle_jogwheels(bool motion_teleop_flag, bool motion_enable_flag, boo
 
         distance = delta * *(axis_data->ajog_scale);
         pos = axis->teleop_tp.pos_cmd + distance;
+        if(axis_num == 0 && delta != 0){
+            printf("pos_cmd %f\n", axis->teleop_tp.pos_cmd);
+        }
         if ( *(axis_data->ajog_vel_mode) ) {
             double v = axis->vel_limit;
             /* compute stopping distance at max speed */
@@ -423,9 +430,16 @@ void axis_handle_jogwheels(bool motion_teleop_flag, bool motion_enable_flag, boo
             } else if ( pos < axis->pos_cmd - stop_dist ) {
                 pos = axis->pos_cmd - stop_dist;
             }
+            if(axis_num == 0 && delta != 0){
+                printf("ajog v %f stop_dist %f axis->pos_cmd %f teleop_tp.curr_pos %f teleop_tp.pos_cmd %f pos %f\n", 
+                    v, stop_dist, axis->pos_cmd, axis->teleop_tp.curr_pos, axis->teleop_tp.pos_cmd, pos);
+            }
         }
         if (pos > axis->max_pos_limit) { break; }
         if (pos < axis->min_pos_limit) { break; }
+        if(axis_num == 0 && delta != 0){
+            printf("pos %f\n", pos);
+        }
         axis->teleop_tp.pos_cmd = pos;
         axis->teleop_tp.max_vel = axis->vel_limit;
         axis->teleop_tp.max_acc = aaccel_limit;
@@ -442,6 +456,7 @@ void axis_sync_teleop_tp_to_carte_pos(int extfactor, double *pcmd_p[])
     for (n = 0; n < EMCMOT_MAX_AXIS; n++) {
         axis_array[n].teleop_tp.curr_pos = *pcmd_p[n]
                             + extfactor * axis_array[n].ext_offset_tp.curr_pos;
+        printf("Sync %i %f\n", n, axis_array[n].teleop_tp.curr_pos);
         axis_array[n].teleop_tp.pos_cmd = axis_array[n].teleop_tp.curr_pos;
     }
 }
@@ -676,9 +691,15 @@ int axis_calc_motion(double servo_period)
         }
         if (update_teleop_with_check(axis_num, &(axis->teleop_tp), servo_period)) {
             violated_teleop_limit = 1;
+            if(axis_num==0){
+                //printf("viol lim");
+            }
         } else {
             axis->teleop_vel_cmd = axis->teleop_tp.curr_vel;
             axis->pos_cmd = axis->teleop_tp.curr_pos;
+            if(axis_num==0){
+                //printf("calc %i %f\n", axis_num, axis->pos_cmd);
+            }
         }
 
         if (!axis->teleop_tp.active) {
