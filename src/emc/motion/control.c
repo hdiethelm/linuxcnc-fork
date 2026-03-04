@@ -1355,14 +1355,14 @@ static void get_pos_cmds(long period)
             }
 
 #else
-        printf("tpRunCycle ctrl\n");
+        //printf("tpRunCycle ctrl\n");
 		int res_runCycle = tpRunCycle(&emcmotInternal->coord_tp, period);
-		printf("tpRunCycle ctrl res = %i\n", res_runCycle);
+		if(res_runCycle != 4) printf("tpRunCycle ctrl res = %i\n", res_runCycle);
 		// get new commanded traj pos
-		printf("tpGetPos ctrl\n");
+		if(res_runCycle != 4) printf("tpGetPos ctrl\n");
 		int res_getPos = tpGetPos(&emcmotInternal->coord_tp, &emcmotStatus->carte_pos_cmd);
-		printf("tpGetPos ctrl res = %i\n", res_getPos);
-		printf(
+		if(res_runCycle != 4) printf("tpGetPos ctrl res = %i\n", res_getPos);
+		if(res_runCycle != 4) printf(
                     "tpGetPos x=%.6g, y=%.6g, z=%.6g, a=%.6g, b=%.6g, c=%.6g, u=%.6g, v=%.6g, w=%.6g\n",
                     emcmotStatus->carte_pos_cmd.tran.x, emcmotStatus->carte_pos_cmd.tran.y, emcmotStatus->carte_pos_cmd.tran.z,
                     emcmotStatus->carte_pos_cmd.a, emcmotStatus->carte_pos_cmd.b, emcmotStatus->carte_pos_cmd.c,

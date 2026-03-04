@@ -996,6 +996,7 @@ void emcmotCommandHandler_locked(void *arg, long servo_period)
 
 	case EMCMOT_SET_SPINDLESYNC:
 		tpSetSpindleSync(&emcmotInternal->coord_tp, emcmotCommand->spindle, emcmotCommand->spindlesync, emcmotCommand->flags);
+		tpSetSpindleSync(&emcmotInternal->coord_test_tp, emcmotCommand->spindle, emcmotCommand->spindlesync, emcmotCommand->flags);
 		break;
 
 	case EMCMOT_SET_LINE:
@@ -1061,9 +1062,9 @@ void emcmotCommandHandler_locked(void *arg, long servo_period)
 	    bool failed=false;
 	    printf("tpIsDone\n");
 	    int i=0;
-	    while(!tpIsDone(&emcmotInternal->coord_test_tp) && i < 100){
+	    while(!tpIsDone(&emcmotInternal->coord_test_tp) && i < 5){
 		long period = 10000000;
-		printf("tpRunCycle\n");
+		//printf("tpRunCycle\n");
 		int res_runCycle = tpRunCycle(&emcmotInternal->coord_test_tp, period);
 		printf("tpRunCycle res = %i\n", res_runCycle);
 		// get new commanded traj pos
@@ -1219,6 +1220,7 @@ void emcmotCommandHandler_locked(void *arg, long servo_period)
 	    /* can do it at any time */
 	    emcmotConfig->limitVel = emcmotCommand->vel;
 	    tpSetVlimit(&emcmotInternal->coord_tp, emcmotConfig->limitVel);
+	    tpSetVlimit(&emcmotInternal->coord_test_tp, emcmotConfig->limitVel);
 	    break;
 
 	case EMCMOT_SET_JOINT_VEL_LIMIT:

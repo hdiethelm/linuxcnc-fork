@@ -2627,10 +2627,10 @@ STATIC void tpDebugCycleInfo(TP_STRUCT const * const tp, TC_STRUCT const * const
     double tc_finalvel = tpGetRealFinalVel(tp, tc, nexttc);
 
     /* Debug Output */
-    tc_debug_print("tc state: vr = %f, vf = %f, maxvel = %f\n",
-            tc_target_vel, tc_finalvel, tc->maxvel);
-    tc_debug_print("          currentvel = %f, fs = %f, tc = %f, term = %d\n",
-            tc->currentvel, tpGetFeedScale(tp,tc), tc->cycle_time, tc->term_cond);
+    tc_debug_print("tc state: vr = %f, vf = %f, maxvel = %f, sync = %i\n",
+            tc_target_vel, tc_finalvel, tc->maxvel, tc->synchronized);
+    tc_debug_print("          currentvel = %f, fs = %f, mv = %f, tc = %f, term = %d\n",
+            tc->currentvel, tpGetFeedScale(tp,tc), tpGetMaxTargetVel(tp, tc), tc->cycle_time, tc->term_cond);
     tc_debug_print("          acc = %f, T = %f, DTG = %.12g\n", acc,
             tcGetTarget(tc,tp->reverse_run), tcGetDistanceToGo(tc,tp->reverse_run));
     tc_debug_print("          reverse_run = %d\n", tp->reverse_run);
