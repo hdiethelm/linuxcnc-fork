@@ -992,6 +992,7 @@ void emcmotCommandHandler_locked(void *arg, long servo_period)
 	    /* sets termination condition for motion emcmotInternal->coord_tp */
 	    rtapi_print_msg(RTAPI_MSG_DBG, "SET_TERM_COND");
 	    tpSetTermCond(&emcmotInternal->coord_tp, emcmotCommand->termCond, emcmotCommand->tolerance);
+	    tpSetTermCond(&emcmotInternal->coord_test_tp, emcmotCommand->termCond, emcmotCommand->tolerance);
 	    break;
 
 	case EMCMOT_SET_SPINDLESYNC:
@@ -1062,7 +1063,7 @@ void emcmotCommandHandler_locked(void *arg, long servo_period)
 	    bool failed=false;
 	    printf("tpIsDone\n");
 	    int i=0;
-	    while(!tpIsDone(&emcmotInternal->coord_test_tp) && i < 5){
+	    while(!tpIsDone(&emcmotInternal->coord_test_tp) && i < 1000000){
 		long period = 10000000;
 		//printf("tpRunCycle\n");
 		int res_runCycle = tpRunCycle(&emcmotInternal->coord_test_tp, period);
@@ -1211,6 +1212,7 @@ void emcmotCommandHandler_locked(void *arg, long servo_period)
 	    rtapi_print_msg(RTAPI_MSG_DBG, "SET_VEL");
 	    emcmotStatus->vel = emcmotCommand->vel;
 	    tpSetVmax(&emcmotInternal->coord_tp, emcmotStatus->vel, emcmotCommand->ini_maxvel);
+	    tpSetVmax(&emcmotInternal->coord_test_tp, emcmotStatus->vel, emcmotCommand->ini_maxvel);
 	    break;
 
 	case EMCMOT_SET_VEL_LIMIT:
@@ -1267,6 +1269,7 @@ void emcmotCommandHandler_locked(void *arg, long servo_period)
 	    rtapi_print_msg(RTAPI_MSG_DBG, "SET_ACCEL");
 	    emcmotStatus->acc = emcmotCommand->acc;
 	    tpSetAmax(&emcmotInternal->coord_tp, emcmotStatus->acc);
+	    tpSetAmax(&emcmotInternal->coord_test_tp, emcmotStatus->acc);
 	    break;
  
 	case EMCMOT_SET_JERK:
@@ -1301,6 +1304,7 @@ void emcmotCommandHandler_locked(void *arg, long servo_period)
 	    /* only allowed during a pause */
 	    rtapi_print_msg(RTAPI_MSG_DBG, "REVERSE");
 	    tpSetRunDir(&emcmotInternal->coord_tp, TC_DIR_REVERSE);
+	    tpSetRunDir(&emcmotInternal->coord_test_tp, TC_DIR_REVERSE);
 	    break;
 
 	case EMCMOT_FORWARD:
@@ -1308,6 +1312,7 @@ void emcmotCommandHandler_locked(void *arg, long servo_period)
 	    /* only allowed during a pause */
 	    rtapi_print_msg(RTAPI_MSG_DBG, "FORWARD");
 	    tpSetRunDir(&emcmotInternal->coord_tp, TC_DIR_FORWARD);
+	    tpSetRunDir(&emcmotInternal->coord_test_tp, TC_DIR_REVERSE);
 	    break;
 
 	case EMCMOT_RESUME:
