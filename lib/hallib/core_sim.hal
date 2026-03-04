@@ -10,6 +10,7 @@ loadrt ddt names=ddt_x,ddt_xv,ddt_y,ddt_yv,ddt_z,ddt_zv
 # load additional blocks
 loadrt hypot names=vel_xy,vel_xyz
 
+#loadusr motion-logger
 # add motion controller functions to servo thread
 addf motion-command-handler servo-thread
 addf motion-controller servo-thread

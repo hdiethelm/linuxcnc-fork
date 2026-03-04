@@ -67,6 +67,7 @@
 #include "motion_types.h"
 #include "homing.h"
 #include "axis.h"
+#include <stdio.h>
 
 #include "tp_debug.h"
 
@@ -491,6 +492,9 @@ void emcmotCommandHandler_locked(void *arg, long servo_period)
                   return;
             }
         }
+	
+	//printf("Command: %i\n", emcmotCommand->command);
+	struct emcmot_command_t *c=emcmotCommand; 
 	switch (emcmotCommand->command) {
 	case EMCMOT_ABORT:
 	    /* abort motion */
@@ -995,6 +999,15 @@ void emcmotCommandHandler_locked(void *arg, long servo_period)
 		break;
 
 	case EMCMOT_SET_LINE:
+		printf(
+                    "SET_LINE x=%.6g, y=%.6g, z=%.6g, a=%.6g, b=%.6g, c=%.6g, u=%.6g, v=%.6g, w=%.6g, id=%d, motion_type=%d, vel=%.6g, ini_maxvel=%.6g, acc=%.6g, turn=%d\n",
+                    c->pos.tran.x, c->pos.tran.y, c->pos.tran.z,
+                    c->pos.a, c->pos.b, c->pos.c,
+                    c->pos.u, c->pos.v, c->pos.w,
+                    c->id, c->motion_type,
+                    c->vel, c->ini_maxvel,
+                    c->acc, c->turn
+                );
 	    /* emcmotInternal->coord_tp up a linear move */
 	    /* requires motion enabled, coordinated mode, not on limits */
 	    rtapi_print_msg(RTAPI_MSG_DBG, "SET_LINE");
@@ -1064,6 +1077,20 @@ void emcmotCommandHandler_locked(void *arg, long servo_period)
 	    break;
 
 	case EMCMOT_SET_CIRCLE:
+		printf("SET_CIRCLE:\n");
+		printf(
+			"    pos: x=%.6g, y=%.6g, z=%.6g, a=%.6g, b=%.6g, c=%.6g, u=%.6g, v=%.6g, w=%.6g\n",
+			c->pos.tran.x, c->pos.tran.y, c->pos.tran.z,
+			c->pos.a, c->pos.b, c->pos.c,
+			c->pos.u, c->pos.v, c->pos.w
+		);
+		printf("    center: x=%.6g, y=%.6g, z=%.6g\n", c->center.x, c->center.y, c->center.z);
+		printf("    normal: x=%.6g, y=%.6g, z=%.6g\n", c->normal.x, c->normal.y, c->normal.z);
+		printf("    id=%d, motion_type=%d, vel=%.6g, ini_maxvel=%.6g, acc=%.6g, turn=%d\n",
+			c->id, c->motion_type,
+			c->vel, c->ini_maxvel,
+			c->acc, c->turn
+		);
 	    /* emcmotInternal->coord_tp up a circular move */
 	    /* requires coordinated mode, enable on, not on limits */
 	    rtapi_print_msg(RTAPI_MSG_DBG, "SET_CIRCLE");
