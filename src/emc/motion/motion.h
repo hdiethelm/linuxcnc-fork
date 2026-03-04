@@ -757,6 +757,7 @@ typedef struct emcmot_internal_t {
     int overriding;     /* non-zero means we've initiated an joint
                            move while overriding limits */
     TP_STRUCT coord_tp; /* coordinated mode planner */
+	TP_STRUCT coord_test_tp; /* coordinated mode planner */
     int idForStep;      /* status id while stepping */
     } emcmot_internal_t;
 

@@ -19,6 +19,7 @@
 
 #include "tcq.h"
 #include <stddef.h>
+#include <stdio.h>
 
 /** Return 0 if queue is valid, -1 if not */
 static inline int tcqCheck(TC_QUEUE_STRUCT const * const tcq)
@@ -117,6 +118,7 @@ int tcqInit(TC_QUEUE_STRUCT * const tcq)
  */
 int tcqPut(TC_QUEUE_STRUCT * const tcq, TC_STRUCT const * const tc)
 {
+    printf("tcqPut\n");
     /* check for initialized */
     if (tcqCheck(tcq)) return -1;
 

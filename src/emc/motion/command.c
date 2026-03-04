@@ -1039,6 +1039,58 @@ void emcmotCommandHandler_locked(void *arg, long servo_period)
 			emcmotStatus->atspeed_next_feed = 1;
 		}
 
+	    //Create a test tp
+	    /* append it to the emcmotInternal->coord_tp */
+	    printf("tpSetId\n");
+	    tpSetId(&emcmotInternal->coord_test_tp, emcmotCommand->id);
+	    printf("tpAddLine\n");
+	    int res_addline_Test = tpAddLine(&emcmotInternal->coord_test_tp,
+					emcmotCommand->pos,
+					emcmotCommand->motion_type,
+					emcmotCommand->vel,
+					emcmotCommand->ini_maxvel,
+					emcmotCommand->acc,
+					emcmotCommand->ini_maxjerk, 
+					emcmotStatus->enables_new,
+					issue_atspeed,
+					emcmotCommand->turn,
+					emcmotCommand->tag);
+	
+	    EmcPose carte_pos_test_cmd;
+	    bool failed=false;
+	    printf("tpIsDone\n");
+	    while(!tpIsDone(&emcmotInternal->coord_test_tp)){
+		long period = 1000000;
+		printf("tpRunCycle\n");
+		tpRunCycle(&emcmotInternal->coord_test_tp, period);
+		/* get new commanded traj pos */
+		printf("tpGetPos\n");
+		tpGetPos(&emcmotInternal->coord_test_tp, &carte_pos_test_cmd);
+		printf(
+                    "tpGetPos x=%.6g, y=%.6g, z=%.6g, a=%.6g, b=%.6g, c=%.6g, u=%.6g, v=%.6g, w=%.6g\n",
+                    carte_pos_test_cmd.tran.x, carte_pos_test_cmd.tran.y, carte_pos_test_cmd.tran.z,
+                    carte_pos_test_cmd.a, carte_pos_test_cmd.b, carte_pos_test_cmd.c,
+                    carte_pos_test_cmd.u, carte_pos_test_cmd.v, carte_pos_test_cmd.w
+                );
+		printf("inRange\n");
+		if (!inRange(carte_pos_test_cmd, emcmotCommand->id, "Linear")) {
+			reportError(_("invalid params in linear command"));
+			emcmotStatus->commandStatus = EMCMOT_COMMAND_INVALID_PARAMS;
+			tpAbort(&emcmotInternal->coord_tp);
+			SET_MOTION_ERROR_FLAG(1);
+			printf("failed1\n");
+			failed=true;
+			break;
+		}
+		printf("tpIsDone\n");
+	    }
+	    if(failed){
+		printf("failed2\n");
+		break;
+	    }
+	    printf("success\n");
+	    //------------------
+
 	    /* append it to the emcmotInternal->coord_tp */
 	    tpSetId(&emcmotInternal->coord_tp, emcmotCommand->id);
 	    int res_addline = tpAddLine(&emcmotInternal->coord_tp,
