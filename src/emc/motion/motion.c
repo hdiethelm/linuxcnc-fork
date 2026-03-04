@@ -255,6 +255,11 @@ static int tp_init() {
             "MOTION: tpCreate failed\n");
         return -1;
     }
+    if (-1 == tpCreate(&emcmotInternal->coord_test_tp, DEFAULT_TC_QUEUE_SIZE,mot_comp_id)) {
+        rtapi_print_msg(RTAPI_MSG_ERR,
+            "MOTION: tpCreate failed\n");
+        return -1;
+    }
     // tpInit is called from tpCreate
     tpSetCycleTime(&emcmotInternal->coord_tp,  emcmotConfig->trajCycleTime);
     tpSetVmax(     &emcmotInternal->coord_tp,  emcmotStatus->vel, emcmotStatus->vel);

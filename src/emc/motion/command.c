@@ -1039,8 +1039,8 @@ void emcmotCommandHandler_locked(void *arg, long servo_period)
 			emcmotStatus->atspeed_next_feed = 1;
 		}
 
+
 	    //Create a test tp
-	    /* append it to the emcmotInternal->coord_tp */
 	    printf("tpSetId\n");
 	    tpSetId(&emcmotInternal->coord_test_tp, emcmotCommand->id);
 	    printf("tpAddLine\n");
@@ -1055,15 +1055,16 @@ void emcmotCommandHandler_locked(void *arg, long servo_period)
 					issue_atspeed,
 					emcmotCommand->turn,
 					emcmotCommand->tag);
-	
+
 	    EmcPose carte_pos_test_cmd;
 	    bool failed=false;
 	    printf("tpIsDone\n");
-	    while(!tpIsDone(&emcmotInternal->coord_test_tp)){
-		long period = 1000000;
+	    int i=0;
+	    while(!tpIsDone(&emcmotInternal->coord_test_tp) && i < 100){
+		long period = 10000000;
 		printf("tpRunCycle\n");
 		tpRunCycle(&emcmotInternal->coord_test_tp, period);
-		/* get new commanded traj pos */
+		// get new commanded traj pos
 		printf("tpGetPos\n");
 		tpGetPos(&emcmotInternal->coord_test_tp, &carte_pos_test_cmd);
 		printf(
@@ -1083,6 +1084,7 @@ void emcmotCommandHandler_locked(void *arg, long servo_period)
 			break;
 		}
 		printf("tpIsDone\n");
+		i++;
 	    }
 	    if(failed){
 		printf("failed2\n");
