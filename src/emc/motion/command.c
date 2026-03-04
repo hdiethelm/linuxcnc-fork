@@ -1056,6 +1056,7 @@ void emcmotCommandHandler_locked(void *arg, long servo_period)
 					emcmotCommand->turn,
 					emcmotCommand->tag);
 
+	    printf("tpAddLine res = %i\n", res_addline_Test);
 	    EmcPose carte_pos_test_cmd;
 	    bool failed=false;
 	    printf("tpIsDone\n");
@@ -1063,10 +1064,12 @@ void emcmotCommandHandler_locked(void *arg, long servo_period)
 	    while(!tpIsDone(&emcmotInternal->coord_test_tp) && i < 100){
 		long period = 10000000;
 		printf("tpRunCycle\n");
-		tpRunCycle(&emcmotInternal->coord_test_tp, period);
+		int res_runCycle = tpRunCycle(&emcmotInternal->coord_test_tp, period);
+		printf("tpRunCycle res = %i\n", res_runCycle);
 		// get new commanded traj pos
 		printf("tpGetPos\n");
-		tpGetPos(&emcmotInternal->coord_test_tp, &carte_pos_test_cmd);
+		int res_getPos = tpGetPos(&emcmotInternal->coord_test_tp, &carte_pos_test_cmd);
+		printf("tpGetPos res = %i\n", res_getPos);
 		printf(
                     "tpGetPos x=%.6g, y=%.6g, z=%.6g, a=%.6g, b=%.6g, c=%.6g, u=%.6g, v=%.6g, w=%.6g\n",
                     carte_pos_test_cmd.tran.x, carte_pos_test_cmd.tran.y, carte_pos_test_cmd.tran.z,

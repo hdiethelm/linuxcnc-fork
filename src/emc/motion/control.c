@@ -19,7 +19,7 @@
 #ifdef SWITCHKINS_DEBUG
 #include <stdio.h>  // rtpreempt only, consolidate to stderr
 #endif
-
+#include <stdio.h>
 #include "posemath.h"
 #include "rtapi.h"
 #include "hal.h"
@@ -1343,7 +1343,7 @@ static void get_pos_cmds(long period)
 	while (cubicNeedNextPoint(&(joints[0].cubic))) {
 	    /* they're empty, pull next point(s) off Cartesian planner */
 	    /* run coordinated trajectory planning cycle */
-
+#if 0
 	    tpRunCycle(&emcmotInternal->coord_tp, period);
             /* get new commanded traj pos */
             tpGetPos(&emcmotInternal->coord_tp, &emcmotStatus->carte_pos_cmd);
@@ -1354,6 +1354,21 @@ static void get_pos_cmds(long period)
                 ext_offset_coord_limit = 0;
             }
 
+#else
+        printf("tpRunCycle ctrl\n");
+		int res_runCycle = tpRunCycle(&emcmotInternal->coord_tp, period);
+		printf("tpRunCycle ctrl res = %i\n", res_runCycle);
+		// get new commanded traj pos
+		printf("tpGetPos ctrl\n");
+		int res_getPos = tpGetPos(&emcmotInternal->coord_tp, &emcmotStatus->carte_pos_cmd);
+		printf("tpGetPos ctrl res = %i\n", res_getPos);
+		printf(
+                    "tpGetPos x=%.6g, y=%.6g, z=%.6g, a=%.6g, b=%.6g, c=%.6g, u=%.6g, v=%.6g, w=%.6g\n",
+                    emcmotStatus->carte_pos_cmd.tran.x, emcmotStatus->carte_pos_cmd.tran.y, emcmotStatus->carte_pos_cmd.tran.z,
+                    emcmotStatus->carte_pos_cmd.a, emcmotStatus->carte_pos_cmd.b, emcmotStatus->carte_pos_cmd.c,
+                    emcmotStatus->carte_pos_cmd.u, emcmotStatus->carte_pos_cmd.v, emcmotStatus->carte_pos_cmd.w
+                );
+#endif
 	    /* OUTPUT KINEMATICS - convert to joints in local array */
 	    result = kinematicsInverse(&emcmotStatus->carte_pos_cmd, positions,
 		&iflags, &fflags);

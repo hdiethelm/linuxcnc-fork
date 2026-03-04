@@ -265,6 +265,11 @@ static int tp_init() {
     tpSetVmax(     &emcmotInternal->coord_tp,  emcmotStatus->vel, emcmotStatus->vel);
     tpSetAmax(     &emcmotInternal->coord_tp,  emcmotStatus->acc);
     tpSetPos(      &emcmotInternal->coord_tp, &emcmotStatus->carte_pos_cmd);
+
+    tpSetCycleTime(&emcmotInternal->coord_test_tp,  emcmotConfig->trajCycleTime);
+    tpSetVmax(     &emcmotInternal->coord_test_tp,  emcmotStatus->vel, emcmotStatus->vel);
+    tpSetAmax(     &emcmotInternal->coord_test_tp,  emcmotStatus->acc);
+    tpSetPos(      &emcmotInternal->coord_test_tp, &emcmotStatus->carte_pos_cmd);
     return 0;
 }
 
@@ -1096,6 +1101,7 @@ static int setTrajCycleTime(double secs)
 
     /* set traj planner */
     tpSetCycleTime(&emcmotInternal->coord_tp, secs);
+    tpSetCycleTime(&emcmotInternal->coord_test_tp, secs);
 
     /* set the free planners, cubic interpolation rate and segment time */
     for (t = 0; t < ALL_JOINTS; t++) {

@@ -15,11 +15,12 @@
 
 #include "rtapi.h"  /* printing functions */
 
+#define TP_DEBUG
+#define TC_DEBUG
 /** TP debug stuff */
 #ifdef TP_DEBUG
-//Kludge because I didn't know any better at the time
-//FIXME replace these with better names?
-#define tp_debug_print(...) rtapi_print(__VA_ARGS__)
+#include <stdio.h>
+#define tp_debug_print(...) printf(__VA_ARGS__)
 #elif defined(UNIT_TEST)
 #include <stdio.h>
 #define tp_debug_print(...) printf(__VA_ARGS__)
@@ -41,7 +42,8 @@
 
 /** "TC" debug info for inspecting trajectory planner output at each timestep */
 #ifdef TC_DEBUG
-#define tc_debug_print(...) rtapi_print(__VA_ARGS__)
+#include <stdio.h>
+#define tc_debug_print(...) printf(__VA_ARGS__)
 #else
 #define tc_debug_print(...) 
 #endif
