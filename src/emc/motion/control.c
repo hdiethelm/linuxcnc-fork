@@ -346,6 +346,7 @@ static void handle_kinematicsSwitch(void) {
 #endif
     axis_apply_ext_offsets_to_carte_pos(-1, pcmd_p);
     tpSetPos(&emcmotInternal->coord_tp, &emcmotStatus->carte_pos_cmd);
+    tpSetPos(&emcmotInternal->coord_test_tp, &emcmotStatus->carte_pos_cmd);
 } //handle_kinematicsSwitch()
 
 static void process_inputs(void)
@@ -907,6 +908,7 @@ static void set_operating_mode(void)
         }
         axis_initialize_external_offsets();
         tpSetPos(&emcmotInternal->coord_tp, &emcmotStatus->carte_pos_cmd);
+        tpSetPos(&emcmotInternal->coord_test_tp, &emcmotStatus->carte_pos_cmd);
 	for (joint_num = 0; joint_num < ALL_JOINTS; joint_num++) {
 	    /* point to joint data */
 	    joint = &joints[joint_num];
@@ -935,6 +937,7 @@ static void set_operating_mode(void)
 
 	    /* update coordinated emcmotInternal->coord_tp position */
 	    tpSetPos(&emcmotInternal->coord_tp, &emcmotStatus->carte_pos_cmd);
+        tpSetPos(&emcmotInternal->coord_test_tp, &emcmotStatus->carte_pos_cmd);
 	    /* drain the cubics so they'll synch up */
 	    for (joint_num = 0; joint_num < EMCMOT_MAX_JOINTS; joint_num++) {
 		if (joint_num < NO_OF_KINS_JOINTS) {
@@ -987,6 +990,7 @@ static void set_operating_mode(void)
                 axis_apply_ext_offsets_to_carte_pos(-1, pcmd_p);
 
 		tpSetPos(&emcmotInternal->coord_tp, &emcmotStatus->carte_pos_cmd);
+        tpSetPos(&emcmotInternal->coord_test_tp, &emcmotStatus->carte_pos_cmd);
 		/* drain the cubics so they'll synch up */
 		for (joint_num = 0; joint_num < NO_OF_KINS_JOINTS; joint_num++) {
 		    /* point to joint data */
