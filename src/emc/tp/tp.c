@@ -397,10 +397,6 @@ STATIC inline double tpGetSignedSpindlePosition(spindle_status_t *status) {
  * @section tpaccess tp class-like API
  */
 
-/* space for trajectory planner queues, plus 10 more for safety */
-/*! \todo FIXME-- default is used; dynamic is not honored */
-	TC_STRUCT queueTcSpace[DEFAULT_TC_QUEUE_SIZE + 10];
-
 /**
  * Create the trajectory planner structure with an empty queue.
  */
@@ -440,7 +436,7 @@ error:
 }
 #endif // }
 
-int tpCreate(TP_STRUCT * const tp, int _queueSize,int id)
+int tpCreate(TP_STRUCT * const tp, TC_STRUCT * queueTcSpace, int _queueSize,int id)
 {
     (void)id;
     if (0 == tp) {
@@ -448,7 +444,8 @@ int tpCreate(TP_STRUCT * const tp, int _queueSize,int id)
     }
 
     if (_queueSize <= 0) {
-        tp->queueSize = TP_DEFAULT_QUEUE_SIZE;
+        rtapi_print("tpCreate _queueSize < 0!\n");
+        return -1;
     } else {
         tp->queueSize = _queueSize;
     }

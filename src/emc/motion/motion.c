@@ -89,6 +89,11 @@ emcmot_hal_data_t *emcmot_hal_data = 0;
 /* allocate array for joint data */
 emcmot_joint_t joints[EMCMOT_MAX_JOINTS];
 
+/* space for trajectory planner queues, plus 10 more for safety */
+/*! \todo FIXME-- default is used; dynamic is not honored */
+TC_STRUCT queueTcSpace[DEFAULT_TC_QUEUE_SIZE + 10];
+TC_STRUCT queueTcSpaceTest[DEFAULT_TC_QUEUE_SIZE + 10];
+
 /*
   Principles of communication:
 
@@ -250,12 +255,12 @@ static int module_intfc() {
 }
 
 static int tp_init() {
-    if (-1 == tpCreate(&emcmotInternal->coord_tp, DEFAULT_TC_QUEUE_SIZE,mot_comp_id)) {
+    if (-1 == tpCreate(&emcmotInternal->coord_tp, queueTcSpace, DEFAULT_TC_QUEUE_SIZE, mot_comp_id)) {
         rtapi_print_msg(RTAPI_MSG_ERR,
             "MOTION: tpCreate failed\n");
         return -1;
     }
-    if (-1 == tpCreate(&emcmotInternal->coord_test_tp, DEFAULT_TC_QUEUE_SIZE,mot_comp_id)) {
+    if (-1 == tpCreate(&emcmotInternal->coord_test_tp, queueTcSpaceTest, DEFAULT_TC_QUEUE_SIZE, mot_comp_id)) {
         rtapi_print_msg(RTAPI_MSG_ERR,
             "MOTION: tpCreate failed\n");
         return -1;

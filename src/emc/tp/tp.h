@@ -29,7 +29,7 @@ int tpIsMoving(TP_STRUCT const * const tp);
 int tpInit(TP_STRUCT * const tp);
 
 // functions used by motmod:
-int tpCreate(TP_STRUCT * const tp, int _queueSize,int id);
+int tpCreate(TP_STRUCT * const tp, TC_STRUCT * queueTcSpace, int _queueSize,int id);
 int tpClear(TP_STRUCT * const tp);
 int tpClearDIOs(TP_STRUCT * const tp);
 int tpSetCycleTime(TP_STRUCT * tp, double secs);

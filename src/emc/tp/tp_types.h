@@ -20,7 +20,6 @@
 
 #include <rtapi_bool.h>
 
-#define TP_DEFAULT_QUEUE_SIZE 32
 /* Minimum length of a segment in cycles (must be greater than 1 to ensure each
  * segment is hit at least once.) */
 #define TP_MIN_SEGMENT_CYCLES 1.02
