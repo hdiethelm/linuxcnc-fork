@@ -1084,6 +1084,7 @@ void emcmotCommandHandler_locked(void *arg, long servo_period)
 				emcmotStatus->commandStatus = EMCMOT_COMMAND_INVALID_PARAMS;
 				tpAbort(&emcmotInternal->coord_tp);
 				tpAbort(&emcmotInternal->coord_test_tp);
+				tpSetPos(&emcmotInternal->coord_test_tp, &emcmotStatus->carte_pos_cmd);
 				SET_MOTION_ERROR_FLAG(1);
 				printf("failed1\n");
 				failed=true;
@@ -1215,6 +1216,7 @@ void emcmotCommandHandler_locked(void *arg, long servo_period)
 				emcmotStatus->commandStatus = EMCMOT_COMMAND_INVALID_PARAMS;
 				tpAbort(&emcmotInternal->coord_tp);
 				tpAbort(&emcmotInternal->coord_test_tp);
+				tpSetPos(&emcmotInternal->coord_test_tp, &emcmotStatus->carte_pos_cmd);
 				SET_MOTION_ERROR_FLAG(1);
 				printf("failed1\n");
 				failed=true;

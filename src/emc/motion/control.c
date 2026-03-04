@@ -871,6 +871,7 @@ static void set_operating_mode(void)
     if (!emcmotInternal->enabling && GET_MOTION_ENABLE_FLAG()) {
 	/* clear out the motion emcmotInternal->coord_tp and interpolators */
 	tpClear(&emcmotInternal->coord_tp);
+    tpClear(&emcmotInternal->coord_test_tp);
 	for (joint_num = 0; joint_num < ALL_JOINTS; joint_num++) {
 	    /* point to joint data */
 	    joint = &joints[joint_num];
