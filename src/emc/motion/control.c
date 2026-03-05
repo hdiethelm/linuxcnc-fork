@@ -34,7 +34,7 @@
 #include "config.h"
 #include "homing.h"
 #include "axis.h"
-
+#include "stdio.h"
 // Mark strings for translation, but defer translation to userspace
 #define _(s) (s)
 
@@ -1540,12 +1540,14 @@ static void get_pos_cmds(long period)
         }
 
 	/* check for no way to stop before soft limits */
-	if (joint->pos_cmd > joint->max_pos_limit - stop_dist + 0.000000000001) {
+	if (v > 0 && joint->pos_cmd > joint->max_pos_limit - stop_dist + 0.000000000001) {
 	    joint_limit[joint_num][1] = 1;
+            if ( ! emcmotStatus->on_soft_limit ) printf("Max: StopDist = %f pc %f mp %f\n", stop_dist, joint->pos_cmd, joint->min_pos_limit);
             projectedlimit = 1;
         }
-        else if (joint->pos_cmd < joint->min_pos_limit + stop_dist - 0.000000000001) {
+        else if (v < 0 && joint->pos_cmd < joint->min_pos_limit + stop_dist - 0.000000000001) {
 	    joint_limit[joint_num][0] = 1;
+            if ( ! emcmotStatus->on_soft_limit ) printf("Min: StopDist = %f pc %f mp %f\n", stop_dist, joint->pos_cmd, joint->min_pos_limit);
             projectedlimit = 1;
         }
     }
