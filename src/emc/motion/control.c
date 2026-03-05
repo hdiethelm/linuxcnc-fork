@@ -1189,6 +1189,7 @@ static void get_pos_cmds(long period)
 
     /* used in teleop mode to compute the max accell requested */
     int onlimit = 0;
+    int projectedlimit = 0;
     int joint_limit[EMCMOT_MAX_JOINTS][2];
 
     /* copy joint position feedback to local array */
@@ -1516,7 +1517,9 @@ static void get_pos_cmds(long period)
     for (joint_num = 0; joint_num < ALL_JOINTS; joint_num++) {
 	/* point to joint data */
 	joint = &joints[joint_num];
-	
+	double v = joint->vel_cmd;
+	double stop_dist = v * v / ( 2 * joint->acc_limit);
+
 	/* Zero values */
 	joint_limit[joint_num][0] = 0;
 	joint_limit[joint_num][1] = 0;
@@ -1535,8 +1538,18 @@ static void get_pos_cmds(long period)
 	    joint_limit[joint_num][0] = 1;
             onlimit = 1;
         }
+
+	/* check for no way to stop before soft limits */
+	if (joint->pos_cmd > joint->max_pos_limit - stop_dist + 0.000000000001) {
+	    joint_limit[joint_num][1] = 1;
+            projectedlimit = 1;
+        }
+        else if (joint->pos_cmd < joint->min_pos_limit + stop_dist - 0.000000000001) {
+	    joint_limit[joint_num][0] = 1;
+            projectedlimit = 1;
+        }
     }
-    if ( onlimit ) {
+    if ( onlimit || projectedlimit ) {
 	if ( ! emcmotStatus->on_soft_limit ) {
         /* Unexpectedly hit a joint soft limit.
         ** Possible causes:
@@ -1557,8 +1570,13 @@ static void get_pos_cmds(long period)
 	    for (joint_num = 0; joint_num < emcmotConfig->numJoints; joint_num++) {
 	        if (joint_limit[joint_num][0] == 1) {
                     joint = &joints[joint_num];
-                    reportError(_("Exceeded NEGATIVE soft limit (%.5f) on joint %d\n"),
-                                  joint->min_pos_limit, joint_num);
+                    if(onlimit){
+                        reportError(_("Exceeded NEGATIVE soft limit (%.5f) on joint %d\n"),
+                                        joint->min_pos_limit, joint_num);
+                    }else{
+                        reportError(_("Going to hit NEGATIVE soft limit (%.5f) on joint %d\n"),
+                                        joint->min_pos_limit, joint_num);
+                    }
                     if (emcmotConfig->kinType == KINEMATICS_IDENTITY) {
                         reportError(_("Joint must be unhomed, jogged into limits, rehomed"));
                     } else {
@@ -1566,8 +1584,13 @@ static void get_pos_cmds(long period)
                     }
                 } else if (joint_limit[joint_num][1] == 1) {
                     joint = &joints[joint_num];
-                    reportError(_("Exceeded POSITIVE soft limit (%.5f) on joint %d\n"),
+                    if(onlimit){
+                        reportError(_("Exceeded POSITIVE soft limit (%.5f) on joint %d\n"),
                                   joint->max_pos_limit,joint_num);
+                    }else{
+                        reportError(_("Going to hit POSITIVE soft limit (%.5f) on joint %d\n"),
+                                        joint->max_pos_limit, joint_num);
+                    }
                     if (emcmotConfig->kinType == KINEMATICS_IDENTITY) {
                         reportError(_("Joint must be unhomed, jogged into limits, rehomed"));
                     } else {
