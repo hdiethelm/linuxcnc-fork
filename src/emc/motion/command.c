@@ -1044,9 +1044,9 @@ void emcmotCommandHandler_locked(void *arg, long servo_period)
 
 	    //Create a test tp
 	    if(true){
-		printf("tpSetId\n");
+		//printf("tpSetId\n");
 		tpSetId(&emcmotInternal->coord_test_tp, emcmotCommand->id);
-		printf("tpAddLine\n");
+		//printf("tpAddLine\n");
 		int res_addline_Test = tpAddLine(&emcmotInternal->coord_test_tp,
 						emcmotCommand->pos,
 						emcmotCommand->motion_type,
@@ -1059,7 +1059,7 @@ void emcmotCommandHandler_locked(void *arg, long servo_period)
 						emcmotCommand->turn,
 						emcmotCommand->tag);
 
-		printf("tpAddLine res = %i\n", res_addline_Test);
+		//printf("tpAddLine res = %i\n", res_addline_Test);
 		EmcPose carte_pos_test_cmd;
 		bool failed=false;
 		int i=0;
@@ -1067,37 +1067,37 @@ void emcmotCommandHandler_locked(void *arg, long servo_period)
 			long period = 10000000;
 			//printf("tpRunCycle\n");
 			int res_runCycle = tpRunCycle(&emcmotInternal->coord_test_tp, period);
-			printf("tpRunCycle res = %i\n", res_runCycle);
+			//printf("tpRunCycle res = %i\n", res_runCycle);
 			// get new commanded traj pos
-			printf("tpGetPos\n");
+			//printf("tpGetPos\n");
 			int res_getPos = tpGetPos(&emcmotInternal->coord_test_tp, &carte_pos_test_cmd);
-			printf("tpGetPos res = %i\n", res_getPos);
-			printf(
+			//printf("tpGetPos res = %i\n", res_getPos);
+			/*printf(
 			"tpGetPos x=%.6g, y=%.6g, z=%.6g, a=%.6g, b=%.6g, c=%.6g, u=%.6g, v=%.6g, w=%.6g\n",
 			carte_pos_test_cmd.tran.x, carte_pos_test_cmd.tran.y, carte_pos_test_cmd.tran.z,
 			carte_pos_test_cmd.a, carte_pos_test_cmd.b, carte_pos_test_cmd.c,
 			carte_pos_test_cmd.u, carte_pos_test_cmd.v, carte_pos_test_cmd.w
-			);
-			printf("inRange\n");
+			);*/
+			//printf("inRange\n");
 			if (!inRange(carte_pos_test_cmd, emcmotCommand->id, "Linear")) {
-				reportError(_("invalid params in linear command"));
+				reportError(_("invalid params in linear command, tp check"));
 				emcmotStatus->commandStatus = EMCMOT_COMMAND_INVALID_PARAMS;
 				tpAbort(&emcmotInternal->coord_tp);
 				tpAbort(&emcmotInternal->coord_test_tp);
 				tpSetPos(&emcmotInternal->coord_test_tp, &emcmotStatus->carte_pos_cmd);
 				SET_MOTION_ERROR_FLAG(1);
-				printf("failed1\n");
+				//printf("failed1\n");
 				failed=true;
 				break;
 			}
-			printf("tpIsDone\n");
+			//printf("tpIsDone\n");
 			i++;
 		}
 		if(failed){
-			printf("failed2\n");
+			//printf("failed2\n");
 			break;
 		}
-		printf("success\n");
+		//printf("success\n");
 	    }
 	    //------------------
 
@@ -1180,9 +1180,9 @@ void emcmotCommandHandler_locked(void *arg, long servo_period)
 
 	    //Create a test tp
 	    if(true){
-		printf("tpSetId\n");
+		//printf("tpSetId\n");
 		tpSetId(&emcmotInternal->coord_test_tp, emcmotCommand->id);
-		printf("tpAddCircle\n");
+		//printf("tpAddCircle\n");
 		int res_addcircle_Test = tpAddCircle(&emcmotInternal->coord_test_tp, emcmotCommand->pos,
 				emcmotCommand->center, emcmotCommand->normal,
 				emcmotCommand->turn, emcmotCommand->motion_type,
@@ -1190,46 +1190,46 @@ void emcmotCommandHandler_locked(void *arg, long servo_period)
 				emcmotCommand->acc, emcmotCommand->ini_maxjerk, emcmotStatus->enables_new,
 				issue_atspeed, emcmotCommand->tag);
 
-		printf("tpAddCircle res = %i\n", res_addcircle_Test);
+		//printf("tpAddCircle res = %i\n", res_addcircle_Test);
 		EmcPose carte_pos_test_cmd;
 		bool failed=false;
-		printf("tpIsDone %i\n", tpIsDone(&emcmotInternal->coord_test_tp));
+		//printf("tpIsDone %i\n", tpIsDone(&emcmotInternal->coord_test_tp));
 		int i=0;
 		while(!tpIsDone(&emcmotInternal->coord_test_tp) && i < 1000000){
 			long period = 10000000;
 			//printf("tpRunCycle\n");
 			int res_runCycle = tpRunCycle(&emcmotInternal->coord_test_tp, period);
-			printf("tpRunCycle res = %i\n", res_runCycle);
+			//printf("tpRunCycle res = %i\n", res_runCycle);
 			// get new commanded traj pos
-			printf("tpGetPos\n");
+			//printf("tpGetPos\n");
 			int res_getPos = tpGetPos(&emcmotInternal->coord_test_tp, &carte_pos_test_cmd);
-			printf("tpGetPos res = %i\n", res_getPos);
-			printf(
+			//printf("tpGetPos res = %i\n", res_getPos);
+			/*printf(
 			"tpGetPos x=%.6g, y=%.6g, z=%.6g, a=%.6g, b=%.6g, c=%.6g, u=%.6g, v=%.6g, w=%.6g\n",
 			carte_pos_test_cmd.tran.x, carte_pos_test_cmd.tran.y, carte_pos_test_cmd.tran.z,
 			carte_pos_test_cmd.a, carte_pos_test_cmd.b, carte_pos_test_cmd.c,
 			carte_pos_test_cmd.u, carte_pos_test_cmd.v, carte_pos_test_cmd.w
-			);
-			printf("inRange\n");
-			if (!inRange(carte_pos_test_cmd, emcmotCommand->id, "Linear")) {
-				reportError(_("invalid params in linear command"));
+			);*/
+			//printf("inRange\n");
+			if (!inRange(carte_pos_test_cmd, emcmotCommand->id, "Circular")) {
+				reportError(_("can't do circular move with limits exceeded, tp check"));
 				emcmotStatus->commandStatus = EMCMOT_COMMAND_INVALID_PARAMS;
 				tpAbort(&emcmotInternal->coord_tp);
 				tpAbort(&emcmotInternal->coord_test_tp);
 				tpSetPos(&emcmotInternal->coord_test_tp, &emcmotStatus->carte_pos_cmd);
 				SET_MOTION_ERROR_FLAG(1);
-				printf("failed1\n");
+				//printf("failed1\n");
 				failed=true;
 				break;
 			}
-			printf("tpIsDone\n");
+			//printf("tpIsDone\n");
 			i++;
 		}
 		if(failed){
-			printf("failed2\n");
+			//printf("failed2\n");
 			break;
 		}
-		printf("success\n");
+		//printf("success\n");
 	    }
 	    //------------------
 

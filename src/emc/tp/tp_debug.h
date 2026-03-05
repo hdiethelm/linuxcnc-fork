@@ -15,8 +15,8 @@
 
 #include "rtapi.h"  /* printing functions */
 
-#define TP_DEBUG
-#define TC_DEBUG
+//#define TP_DEBUG
+//#define TC_DEBUG
 /** TP debug stuff */
 #ifdef TP_DEBUG
 #include <stdio.h>
