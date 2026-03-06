@@ -273,6 +273,11 @@ private:
 class Usb : public UsbRawInputListener
 {
 public:
+    enum class InitStatus{
+        EXIT,  //Program should exit
+        RETRY, //Program should retry
+        OK     //All fine
+    };
     static const ConstantUsbPackages ConstantPackages;
     //! \param name device string used for printing messages
     //! \param onDataReceivedCallback called when received data is ready
@@ -300,7 +305,7 @@ public:
     void enableVerboseTx(bool enable);
     void enableVerboseRx(bool enable);
     void enableVerboseInit(bool enable);
-    bool init();
+    InitStatus init();
     void setWaitWithTimeout(uint8_t waitSecs);
 
     UsbOutPackageData& getOutputPackageData();
