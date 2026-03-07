@@ -125,16 +125,6 @@ ConstantUsbPackages::ConstantUsbPackages() :
 {
 }
 // ----------------------------------------------------------------------
-uint16_t Usb::getUsbVendorId() const
-{
-    return usbVendorId;
-}
-// ----------------------------------------------------------------------
-uint16_t Usb::getUsbProductId() const
-{
-    return usbProductId;
-}
-// ----------------------------------------------------------------------
 bool Usb::isDeviceOpen() const
 {
     return deviceHandle != nullptr;
@@ -148,11 +138,6 @@ bool Usb::isWaitForPendantBeforeHalEnabled() const
 bool Usb::getDoReconnect() const
 {
     return mDoReconnect;
-}
-// ----------------------------------------------------------------------
-void Usb::setDoReconnect(bool doReconnect)
-{
-    this->mDoReconnect = doReconnect;
 }
 // ----------------------------------------------------------------------
 Usb::Usb(const char* name, OnUsbInputPackageListener& onDataReceivedCallback, Hal& hal) :
@@ -210,7 +195,7 @@ void Usb::sendDisplayData()
         if (r < 0)
         {
             std::cerr << "transmission failed, try to reconnect ..." << endl;
-            setDoReconnect(true);
+            mDoReconnect = true;
             return;
         }
     }
@@ -599,7 +584,7 @@ Usb::InitStatus Usb::init()
             *verboseInitOut << "." << std::flush;
             sleep(1);
         }
-        setDoReconnect(false);
+        mDoReconnect=false;
         *verboseInitOut << " done" << endl;
     }
 
