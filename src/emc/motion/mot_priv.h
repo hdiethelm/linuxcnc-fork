@@ -300,6 +300,10 @@ int joint_is_lockable(int joint_num);
 
 #define SET_MOTION_ENABLE_FLAG(fl) if (fl) emcmotStatus->motionFlag |= EMCMOT_MOTION_ENABLE_BIT; else emcmotStatus->motionFlag &= ~EMCMOT_MOTION_ENABLE_BIT;
 
+#define GET_MOTION_HARDSTOP_FLAG() (emcmotStatus->motionFlag & EMCMOT_MOTION_HARDSTOP_BIT ? 1 : 0)
+
+#define SET_MOTION_HARDSTOP_FLAG(fl) if (fl) emcmotStatus->motionFlag |= EMCMOT_MOTION_HARDSTOP_BIT; else emcmotStatus->motionFlag &= ~EMCMOT_MOTION_HARDSTOP_BIT;
+
 #define GET_TRAJ_PLANNER_TYPE() (emcmotStatus->planner_type)
 
 #define SET_TRAK_PLANNER_TYPE(tp) (emcmotStatus->planner_type = tp)

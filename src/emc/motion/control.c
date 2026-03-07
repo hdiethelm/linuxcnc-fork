@@ -1028,6 +1028,8 @@ static void set_operating_mode(void)
        for this info, instead of having to gather it from several flags */
     if (!GET_MOTION_ENABLE_FLAG()) {
 	emcmotStatus->motion_state = EMCMOT_MOTION_DISABLED;
+    } else if (GET_MOTION_HARDSTOP_FLAG()){
+        emcmotStatus->motion_state = EMCMOT_MOTION_STOP;
     } else if (GET_MOTION_TELEOP_FLAG()) {
 	emcmotStatus->motion_state = EMCMOT_MOTION_TELEOP;
     } else if (GET_MOTION_COORD_FLAG()) {
@@ -1503,6 +1505,36 @@ static void get_pos_cmds(long period)
 	}
 
 	break;
+    case EMCMOT_MOTION_STOP:
+        //printf("Stop\n");
+        {
+            bool done = true;
+            for (joint_num = 0; joint_num < ALL_JOINTS; joint_num++) {
+                /* point to joint struct */
+                joint = &joints[joint_num];
+                if(joint->vel_cmd > 0){
+                        joint->acc_cmd = - joint->acc_limit;
+                }else{
+                        joint->acc_cmd = + joint->acc_limit;
+                }
+                joint->vel_cmd += joint->acc_cmd * servo_period;
+                if(fabs(joint->vel_cmd) > 0.1){
+                        done = false;
+                }else{
+                        joint->vel_cmd = 0;
+                        joint->acc_cmd = 0;
+                }
+                joint->pos_cmd += joint->vel_cmd * servo_period;
+            }
+            if(done){
+                /* Doesn't work, tp just continues
+                SET_MOTION_HARDSTOP_FLAG(0);
+                tpAbort(&emcmotInternal->coord_tp);
+                tpSetPos(&emcmotInternal->coord_tp, &emcmotStatus->carte_pos_cmd);
+                */
+            }
+        }
+        break;
     default:
 	break;
     }
@@ -1601,6 +1633,7 @@ static void get_pos_cmds(long period)
                 }
 	    }
 	    SET_MOTION_ERROR_FLAG(1);
+	    SET_MOTION_HARDSTOP_FLAG(1);
 	    emcmotStatus->on_soft_limit = 1;
 	}
     } else {
