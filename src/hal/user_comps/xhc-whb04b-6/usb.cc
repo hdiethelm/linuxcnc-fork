@@ -135,11 +135,6 @@ bool Usb::isWaitForPendantBeforeHalEnabled() const
     return isWaitWithTimeout;
 }
 // ----------------------------------------------------------------------
-bool Usb::getDoReconnect() const
-{
-    return mDoReconnect;
-}
-// ----------------------------------------------------------------------
 Usb::Usb(const char* name, OnUsbInputPackageListener& onDataReceivedCallback, Hal& hal) :
     sleepState(),
     inputPackageBuffer(),
@@ -431,6 +426,7 @@ bool Usb::setupAsyncTransfer()
     int r = libusb_submit_transfer(inTransfer);
     if(r != 0){
         std::cerr << "libusb_submit_transfer failed with " << r << endl;
+        mDoReconnect = true;
         return false;
     }
     else
@@ -513,7 +509,7 @@ void Usb::onUsbDataReceived(struct libusb_transfer* transfer)
             {
                 if(!setupAsyncTransfer())
                 {
-                    requestTermination();
+                    transferFailed = true;
                 }
             }
 
@@ -525,7 +521,7 @@ void Usb::onUsbDataReceived(struct libusb_transfer* transfer)
             {
                 if(!setupAsyncTransfer())
                 {
-                    requestTermination();
+                    transferFailed = true;
                 }
             }
             break;
@@ -538,12 +534,12 @@ void Usb::onUsbDataReceived(struct libusb_transfer* transfer)
         case (LIBUSB_TRANSFER_OVERFLOW):
         case (LIBUSB_TRANSFER_ERROR):
             std::cerr << "transfer error: " << transfer->status << endl;
-            requestTermination();
+            transferFailed = true;
             break;
 
         default:
             std::cerr << "unknown transfer status: " << transfer->status << endl;
-            requestTermination();
+            transferFailed = true;
             break;
     }
     //libusb_free_transfer(transfer);
@@ -599,7 +595,7 @@ Usb::InitStatus Usb::init()
     {
         std::cerr << endl << "Bug: Not cleaned up deviceHandle properly before calling init again!" << endl;
     }
-    if (getDoReconnect())
+    if (mDoReconnect)
     {
         int pauseSecs = 3;
         *verboseInitOut << "init  pausing " << pauseSecs << "s, waiting for device to be gone ...";
@@ -676,11 +672,11 @@ Usb::InitStatus Usb::init()
             sleep(1);
         }
     } while (deviceHandle == nullptr && mIsRunning);
-    *verboseInitOut << " ok" << endl
-                    << "init  " << mName << " device found" << endl;
 
     if (deviceHandle != nullptr)
     {
+        *verboseInitOut << " ok" << endl
+                        << "init  " << mName << " device found" << endl;
         *verboseInitOut << "init  detaching active kernel driver ...";
         r = libusb_kernel_driver_active(deviceHandle, 0);
         if (r == 1)
@@ -722,7 +718,7 @@ Usb::InitStatus Usb::init()
     return InitStatus::OK;
 }
 // ----------------------------------------------------------------------
-void Usb::handleTimeouts()
+void Usb::process()
 {
     struct timeval timeout;
     timeout.tv_sec  = 0;
@@ -731,7 +727,14 @@ void Usb::handleTimeouts()
     int r = libusb_handle_events_timeout_completed(context, &timeout, nullptr);
     if(r != 0)
     {
-        std::cerr << endl << "Error: handleTimeouts() libusb_handle_events_timeout_completed returned " << r << endl;
+        std::cerr << endl << "Error: process() libusb_handle_events_timeout_completed returned " << r << endl;
+    }
+
+    if(transferFailed)
+    {
+        close();
+        transferFailed = false;
+        mDoReconnect = true;
     }
 }
 // ----------------------------------------------------------------------
