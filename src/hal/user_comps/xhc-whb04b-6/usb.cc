@@ -657,7 +657,7 @@ Usb::InitStatus Usb::init()
         if (devicesCount < 0)
         {
             std::cerr << endl << "failed to get device list" << endl;
-            teardown();
+            closeLibusb();
             mDoReconnect=true;
             return InitStatus::RETRY;
         }
@@ -674,7 +674,7 @@ Usb::InitStatus Usb::init()
                 if ((mWaitSecs--) <= 0)
                 {
                     std::cerr << endl << "Configured timeout exceeded, exiting" << endl;
-                    teardown();
+                    closeLibusb();
                     return InitStatus::EXIT;
                 }
             }
@@ -695,7 +695,7 @@ Usb::InitStatus Usb::init()
             {
                 std::cerr << "libusb_detach_kernel_driver failed with " << r << endl;
                 closeHandle();
-                teardown();
+                closeLibusb();
                 mDoReconnect=true;
                 return InitStatus::RETRY;
             }
@@ -709,7 +709,7 @@ Usb::InitStatus Usb::init()
         {
             std::cerr << "libusb_kernel_driver_active failed with " << r << endl;
             closeHandle();
-            teardown();
+            closeLibusb();
             mDoReconnect=true;
             return InitStatus::RETRY;
         }
@@ -719,7 +719,7 @@ Usb::InitStatus Usb::init()
         {
             std::cerr << endl << "failed to claim interface" << endl;
             closeHandle();
-            teardown();
+            closeLibusb();
             mDoReconnect=true;
             return InitStatus::RETRY;
         }
@@ -730,6 +730,12 @@ Usb::InitStatus Usb::init()
 // ----------------------------------------------------------------------
 void Usb::process()
 {
+    if(context == nullptr)
+    {
+        std::cerr << endl << "Bug: process context is closed!" << endl;
+        return;
+    }
+
     struct timeval timeout;
     timeout.tv_sec  = 0;
     timeout.tv_usec = 200 * 1000;
@@ -750,12 +756,38 @@ void Usb::process()
 // ----------------------------------------------------------------------
 void Usb::closeHandle()
 {
+    if(deviceHandle == nullptr)
+    {
+        std::cerr << endl << "Bug: closeHandle allready closed!" << endl;
+        return;
+    }
     libusb_close(deviceHandle);
     deviceHandle = nullptr;
 }
 // ----------------------------------------------------------------------
+void Usb::closeLibusb()
+{
+    if(context == nullptr)
+    {
+        std::cerr << endl << "Bug: closeLibusb allready closed!" << endl;
+        return;
+    }
+    libusb_exit(context);
+    context = nullptr;
+}
+// ----------------------------------------------------------------------
 void Usb::close()
 {
+    if(context == nullptr)
+    {
+        std::cerr << endl << "Bug: close context allready closed!" << endl;
+        return;
+    }
+    if(deviceHandle == nullptr)
+    {
+        std::cerr << endl << "Bug: close deviceHandle allready closed!" << endl;
+        return;
+    }
     struct timeval tv;
     tv.tv_sec  = 1;
     tv.tv_usec = 0;
@@ -770,12 +802,7 @@ void Usb::close()
         std::cerr << endl << "Error: close() libusb_release_interface returned " << r << endl;
     }
     closeHandle();
-}
-// ----------------------------------------------------------------------
-void Usb::teardown()
-{
-    libusb_exit(context);
-    context = nullptr;
+    closeLibusb();
 }
 // ----------------------------------------------------------------------
 void Usb::setWaitWithTimeout(uint8_t waitSecs)
