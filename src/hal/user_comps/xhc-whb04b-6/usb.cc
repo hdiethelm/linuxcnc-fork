@@ -424,7 +424,8 @@ bool Usb::setupAsyncTransfer()
         //! timeout[ms]
                               750);
     int r = libusb_submit_transfer(inTransfer);
-    if(r != 0){
+    if(r != 0)
+    {
         std::cerr << "libusb_submit_transfer failed with " << r << endl;
         mDoReconnect = true;
         return false;
@@ -549,7 +550,8 @@ void Usb::onUsbDataReceived(struct libusb_transfer* transfer)
 // ----------------------------------------------------------------------
 Usb::~Usb()
 {
-    if(deviceHandle != nullptr){
+    if(deviceHandle != nullptr)
+    {
         close();
     }
     libusb_free_transfer(inTransfer);
@@ -689,7 +691,8 @@ Usb::InitStatus Usb::init()
         if (r == 1)
         {
             r = libusb_detach_kernel_driver(deviceHandle, 0);
-            if(r < 0){
+            if(r < 0)
+            {
                 std::cerr << "libusb_detach_kernel_driver failed with " << r << endl;
                 closeHandle();
                 teardown();
