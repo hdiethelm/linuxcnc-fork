@@ -303,6 +303,7 @@ extern "C" {
 #define EMCMOT_MOTION_COORD_BIT       0x0004
 #define EMCMOT_MOTION_ERROR_BIT       0x0008
 #define EMCMOT_MOTION_TELEOP_BIT      0x0010
+#define EMCMOT_MOTION_HARDSTOP_BIT    0x0020
 
 /* joint flag type */
     typedef unsigned short EMCMOT_JOINT_FLAG;
@@ -407,7 +408,8 @@ Suggestion: Split this in to an Error and a Status flag register..
 	EMCMOT_MOTION_DISABLED = 0,
 	EMCMOT_MOTION_FREE,
 	EMCMOT_MOTION_TELEOP,
-	EMCMOT_MOTION_COORD
+	EMCMOT_MOTION_COORD,
+	EMCMOT_MOTION_STOP
     } motion_state_t;
 
 
