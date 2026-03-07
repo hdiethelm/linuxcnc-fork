@@ -307,6 +307,7 @@ public:
     UsbOutPackageData& getOutputPackageData();
 
 private:
+    void closeHandle();
     const uint16_t usbVendorId{0x10ce};
     const uint16_t usbProductId{0xeb93};
     libusb_context      * context{nullptr};
