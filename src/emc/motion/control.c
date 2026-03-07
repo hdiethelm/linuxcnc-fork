@@ -1525,13 +1525,19 @@ static void get_pos_cmds(long period)
                         joint->acc_cmd = 0;
                 }
                 joint->pos_cmd += joint->vel_cmd * servo_period;
+                joint->coarse_pos = joint->pos_cmd;
             }
+            result = kinematicsForward(positions, &emcmotStatus->carte_pos_cmd, &fflags, &iflags);
             if(done){
-                /* Doesn't work, tp just continues
                 SET_MOTION_HARDSTOP_FLAG(0);
-                tpAbort(&emcmotInternal->coord_tp);
+                printf("Stop done\n");
+                //Just run the tp to completion to stop, tpAbort(&emcmotInternal->coord_tp) doesn't work
+                while(!tpIsDone(&emcmotInternal->coord_tp)){
+                    tpRunCycle(&emcmotInternal->coord_tp, period);
+                }
+                printf("Stop final1\n");
                 tpSetPos(&emcmotInternal->coord_tp, &emcmotStatus->carte_pos_cmd);
-                */
+                printf("Stop final2\n");
             }
         }
         break;
