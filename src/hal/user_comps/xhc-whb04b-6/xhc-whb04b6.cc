@@ -459,6 +459,10 @@ int XhcWhb04b6Component::run()
             process();
             mUsb.teardown();
         }
+        else
+        {
+            mUsb.teardown();
+        }
     }
     teardownHal();
 
