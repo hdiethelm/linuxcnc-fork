@@ -1517,8 +1517,10 @@ static void get_pos_cmds(long period)
                 }else{
                         joint->acc_cmd = + joint->acc_limit;
                 }
+                double vel_old = joint->vel_cmd;
                 joint->vel_cmd += joint->acc_cmd * servo_period;
-                if(fabs(joint->vel_cmd) > 0.1){
+                //Check for sign change: If new vel and old vel have different sign, we are done
+                if( vel_old * joint->vel_cmd > 0){
                         done = false;
                 }else{
                         joint->vel_cmd = 0;
@@ -1527,7 +1529,7 @@ static void get_pos_cmds(long period)
                 joint->pos_cmd += joint->vel_cmd * servo_period;
                 joint->coarse_pos = joint->pos_cmd;
             }
-            result = kinematicsForward(positions, &emcmotStatus->carte_pos_cmd, &fflags, &iflags);
+            kinematicsForward(positions, &emcmotStatus->carte_pos_cmd, &fflags, &iflags);
             if(done){
                 SET_MOTION_HARDSTOP_FLAG(0);
                 printf("Stop done\n");
@@ -1535,7 +1537,7 @@ static void get_pos_cmds(long period)
                 while(!tpIsDone(&emcmotInternal->coord_tp)){
                     tpRunCycle(&emcmotInternal->coord_tp, period);
                 }
-                printf("Stop final1\n");
+                printf("Stop final1 %f\n", emcmotStatus->carte_pos_cmd.tran.y);
                 tpSetPos(&emcmotInternal->coord_tp, &emcmotStatus->carte_pos_cmd);
                 printf("Stop final2\n");
             }
@@ -1556,7 +1558,7 @@ static void get_pos_cmds(long period)
 	/* point to joint data */
 	joint = &joints[joint_num];
 	double v = joint->vel_cmd;
-	double stop_dist = v * v / ( 2 * joint->acc_limit);
+	double stop_dist = v * v / ( 2 * joint->acc_limit * 0.99 ); //Take 99% so be save
 
 	/* Zero values */
 	joint_limit[joint_num][0] = 0;
