@@ -285,12 +285,8 @@ public:
     ~Usb();
     uint16_t getUsbVendorId() const;
     uint16_t getUsbProductId() const;
-    const bool isDeviceOpen() const;
-    libusb_context** getContextReference();
-    libusb_context* getContext();
-    void setContext(libusb_context* context);
-    libusb_device_handle* getDeviceHandle();
-    void setDeviceHandle(libusb_device_handle* deviceHandle);
+    void setUsbProductId(uint16_t usbProductId);
+    bool isDeviceOpen() const;
     bool isWaitForPendantBeforeHalEnabled() const;
     bool getDoReconnect() const;
     void setDoReconnect(bool doReconnect);
@@ -306,6 +302,9 @@ public:
     void enableVerboseRx(bool enable);
     void enableVerboseInit(bool enable);
     InitStatus init();
+    void handleTimeouts();
+    void close();
+    void teardown();
     void setWaitWithTimeout(uint8_t waitSecs);
 
     UsbOutPackageData& getOutputPackageData();
