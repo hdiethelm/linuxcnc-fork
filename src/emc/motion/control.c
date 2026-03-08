@@ -1532,7 +1532,6 @@ static void get_pos_cmds(long period)
             kinematicsForward(positions, &emcmotStatus->carte_pos_cmd, &fflags, &iflags);
             if(done){
                 SET_MOTION_HARDSTOP_FLAG(0);
-                printf("Stop done\n");
                 //Just run the tp to completion to stop, only doing tpAbort(&emcmotInternal->coord_tp) doesn't work
                 //I guess there are some components of the tp which are not properly reset
                 //This code is probably crap and should be improved
@@ -1546,9 +1545,8 @@ static void get_pos_cmds(long period)
                     joint = &joints[joint_num];
                     cubicDrain(&(joint->cubic));
                 }
-                printf("Stop final1 %f\n", emcmotStatus->carte_pos_cmd.tran.y);
                 tpSetPos(&emcmotInternal->coord_tp, &emcmotStatus->carte_pos_cmd);
-                printf("Stop final2\n");
+                printf("Stop done [%f %f %f]\n", emcmotStatus->carte_pos_cmd.tran.x, emcmotStatus->carte_pos_cmd.tran.y, emcmotStatus->carte_pos_cmd.tran.z);
             }
         }
         break;
