@@ -1533,9 +1533,18 @@ static void get_pos_cmds(long period)
             if(done){
                 SET_MOTION_HARDSTOP_FLAG(0);
                 printf("Stop done\n");
-                //Just run the tp to completion to stop, tpAbort(&emcmotInternal->coord_tp) doesn't work
+                //Just run the tp to completion to stop, only doing tpAbort(&emcmotInternal->coord_tp) doesn't work
+                //I guess there are some components of the tp which are not properly reset
+                //This code is probably crap and should be improved
                 while(!tpIsDone(&emcmotInternal->coord_tp)){
                     tpRunCycle(&emcmotInternal->coord_tp, period);
+                }
+                tpAbort(&emcmotInternal->coord_tp);
+                /* drain the cubics so they'll synch up */
+                for (joint_num = 0; joint_num < NO_OF_KINS_JOINTS; joint_num++) {
+                    /* point to joint data */
+                    joint = &joints[joint_num];
+                    cubicDrain(&(joint->cubic));
                 }
                 printf("Stop final1 %f\n", emcmotStatus->carte_pos_cmd.tran.y);
                 tpSetPos(&emcmotInternal->coord_tp, &emcmotStatus->carte_pos_cmd);
@@ -1554,11 +1563,17 @@ static void get_pos_cmds(long period)
 	2) if homing params are wrong then after homing joint pos_cmd are outside,
 	the upstream checks will pass it.
     */
+    double stop_dist_acc_scale;
+    if(emcmotStatus->motion_state == EMCMOT_MOTION_COORD){
+        stop_dist_acc_scale = 0.999; //Take a bit less to be able to stop and recover
+    }else{
+        stop_dist_acc_scale = 1.001; //Take a bit more so we don't stop unneccesarely
+    }
     for (joint_num = 0; joint_num < ALL_JOINTS; joint_num++) {
 	/* point to joint data */
 	joint = &joints[joint_num];
 	double v = joint->vel_cmd;
-	double stop_dist = v * v / ( 2 * joint->acc_limit * 0.99 ); //Take 99% so be save
+	double stop_dist = v * v / ( 2 * joint->acc_limit * stop_dist_acc_scale );
 
 	/* Zero values */
 	joint_limit[joint_num][0] = 0;
@@ -1615,28 +1630,28 @@ static void get_pos_cmds(long period)
                     if(onlimit){
                         reportError(_("Exceeded NEGATIVE soft limit (%.5f) on joint %d\n"),
                                         joint->min_pos_limit, joint_num);
+                        if (emcmotConfig->kinType == KINEMATICS_IDENTITY) {
+                            reportError(_("Joint must be unhomed, jogged into limits, rehomed"));
+                        } else {
+                            reportError(_("Hint: switch to joint mode to jog off soft limit"));
+                        }
                     }else{
-                        reportError(_("Going to hit NEGATIVE soft limit (%.5f) on joint %d\n"),
+                        reportError(_("Going to hit NEGATIVE soft limit (%.5f) on joint %d, stopped move\n"),
                                         joint->min_pos_limit, joint_num);
-                    }
-                    if (emcmotConfig->kinType == KINEMATICS_IDENTITY) {
-                        reportError(_("Joint must be unhomed, jogged into limits, rehomed"));
-                    } else {
-                        reportError(_("Hint: switch to joint mode to jog off soft limit"));
                     }
                 } else if (joint_limit[joint_num][1] == 1) {
                     joint = &joints[joint_num];
                     if(onlimit){
                         reportError(_("Exceeded POSITIVE soft limit (%.5f) on joint %d\n"),
                                   joint->max_pos_limit,joint_num);
+                        if (emcmotConfig->kinType == KINEMATICS_IDENTITY) {
+                            reportError(_("Joint must be unhomed, jogged into limits, rehomed"));
+                        } else {
+                            reportError(_("Hint: switch to joint mode to jog off soft limit"));
+                        }
                     }else{
-                        reportError(_("Going to hit POSITIVE soft limit (%.5f) on joint %d\n"),
+                        reportError(_("Going to hit POSITIVE soft limit (%.5f) on joint %d, stopped move\n"),
                                         joint->max_pos_limit, joint_num);
-                    }
-                    if (emcmotConfig->kinType == KINEMATICS_IDENTITY) {
-                        reportError(_("Joint must be unhomed, jogged into limits, rehomed"));
-                    } else {
-                        reportError(_("Hint: switch to joint mode to jog off soft limit"));
                     }
                 }
 	    }
