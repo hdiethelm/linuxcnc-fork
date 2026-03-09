@@ -1,0 +1,7 @@
+loadrt soft_limits num_joints=1
+
+loadrt threads name1=test-thread period1=1000000
+
+setp soft_limits.0.acc-max 200
+
+addf soft_limits.process test-thread
