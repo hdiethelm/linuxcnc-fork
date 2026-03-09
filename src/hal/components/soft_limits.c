@@ -37,6 +37,8 @@ typedef struct {
     hal_float_t min_pos_limit;
     hal_float_t max_pos_limit;
     
+    hal_bit_t *homed;
+
     hal_float_t *pos_cmd_in;
     hal_float_t *vel_cmd_in;
     hal_float_t *acc_cmd_in;
@@ -130,40 +132,43 @@ int rtapi_app_main(void)
     /* export pins/params for all joints */
     for (n = 0; n < num_joints; n++) {
         retval=hal_param_float_newf(HAL_RW, &(joints[n].acc_max), comp_id, "soft_limits.%d.acc-max", n);
-        if (retval != 0) {return -1;}
+        if (retval != 0) {cleanup(); return -1;}
         retval=hal_param_float_newf(HAL_RW, &(joints[n].min_pos_limit), comp_id, "soft_limits.%d.min-pos-limit", n);
-        if (retval != 0) {return -1;}
+        if (retval != 0) {cleanup(); return -1;}
         retval=hal_param_float_newf(HAL_RW, &(joints[n].max_pos_limit), comp_id, "soft_limits.%d.max-pos-limit", n);
-        if (retval != 0) {return -1;}
+        if (retval != 0) {cleanup(); return -1;}
+
+        retval=hal_pin_bit_newf(HAL_IN, &(joints[n].homed), comp_id, "soft_limits.%d.homed", n);
+        if (retval != 0) {cleanup(); return -1;}
 
         retval=hal_pin_float_newf(HAL_IN, &(joints[n].pos_cmd_in), comp_id, "soft_limits.%d.pos-cmd-in", n);
-        if (retval != 0) {return -1;}
+        if (retval != 0) {cleanup(); return -1;}
         retval=hal_pin_float_newf(HAL_IN, &(joints[n].vel_cmd_in), comp_id, "soft_limits.%d.vel-cmd-in", n);
-        if (retval != 0) {return -1;}
+        if (retval != 0) {cleanup(); return -1;}
         retval=hal_pin_float_newf(HAL_IN, &(joints[n].acc_cmd_in), comp_id, "soft_limits.%d.acc-cmd-in", n);
-        if (retval != 0) {return -1;}
+        if (retval != 0) {cleanup(); return -1;}
         retval=hal_pin_float_newf(HAL_IN, &(joints[n].pos_fb_in), comp_id, "soft_limits.%d.pos-fb-in", n);
-        if (retval != 0) {return -1;}
+        if (retval != 0) {cleanup(); return -1;}
         retval=hal_pin_bit_newf(HAL_IN, &(joints[n].pos_lim_sw_in), comp_id, "soft_limits.%d.pos-lim-sw-in", n);
-        if (retval != 0) {return -1;}
+        if (retval != 0) {cleanup(); return -1;}
         retval=hal_pin_bit_newf(HAL_IN, &(joints[n].neg_lim_sw_in), comp_id, "soft_limits.%d.neg-lim-sw-in", n);
-        if (retval != 0) {return -1;}
+        if (retval != 0) {cleanup(); return -1;}
 
         retval=hal_pin_float_newf(HAL_OUT, &(joints[n].pos_cmd_out), comp_id, "soft_limits.%d.pos-cmd-out", n);
-        if (retval != 0) {return -1;}
+        if (retval != 0) {cleanup(); return -1;}
         retval=hal_pin_float_newf(HAL_OUT, &(joints[n].vel_cmd_out), comp_id, "soft_limits.%d.vel-cmd-out", n);
-        if (retval != 0) {return -1;}
+        if (retval != 0) {cleanup(); return -1;}
         retval=hal_pin_float_newf(HAL_OUT, &(joints[n].acc_cmd_out), comp_id, "soft_limits.%d.acc-cmd-out", n);
-        if (retval != 0) {return -1;}
+        if (retval != 0) {cleanup(); return -1;}
         retval=hal_pin_float_newf(HAL_OUT, &(joints[n].pos_fb_out), comp_id, "soft_limits.%d.pos-fb-out", n);
-        if (retval != 0) {return -1;}
+        if (retval != 0) {cleanup(); return -1;}
         retval=hal_pin_bit_newf(HAL_OUT, &(joints[n].pos_lim_sw_out), comp_id, "soft_limits.%d.pos-lim-sw-out", n);
-        if (retval != 0) {return -1;}
+        if (retval != 0) {cleanup(); return -1;}
         retval=hal_pin_bit_newf(HAL_OUT, &(joints[n].neg_lim_sw_out), comp_id, "soft_limits.%d.neg-lim-sw-out", n);
-        if (retval != 0) {return -1;}
+        if (retval != 0) {cleanup(); return -1;}
 
         retval=hal_pin_bit_newf(HAL_OUT, &(joints[n].fault_out), comp_id, "soft_limits.%d.fault-out", n);
-        if (retval != 0) {return -1;}
+        if (retval != 0) {cleanup(); return -1;}
 
         //ToDo: Init!
         joints[n].state=0;
@@ -171,7 +176,7 @@ int rtapi_app_main(void)
 
     /* export "global" pins */
     retval=hal_pin_bit_newf(HAL_OUT, &(data->estop_out), comp_id, "soft_limits.estop-out");
-    if (retval != 0) {return -1;}
+    if (retval != 0) {cleanup(); return -1;}
     
     /* export functions */
     retval = hal_export_funct("soft_limits.process", process, joints, 1, 0, comp_id);
@@ -202,6 +207,10 @@ static void process(void *arg, long period)
     int n;
     const double tol = 0.000000000001;
     for (n = 0; n < num_joints; n++) {
+        //Ignore unhomed joints
+        if(!*joints[n].homed){
+            break;
+        }
         if (*joints[n].pos_cmd_in > joints[n].max_pos_limit + tol || *joints[n].pos_cmd_out > joints[n].max_pos_limit + tol) {
             if ( joints[n].state != 2 ) {
                 rtapi_print_msg(RTAPI_MSG_ERR, "soft_limits: ERROR: limits are exceided! pos %f limit %f joint %d\n", *joints[n].pos_cmd_in, joints[n].max_pos_limit, n);
@@ -223,6 +232,10 @@ static void process(void *arg, long period)
 
     if(data->state == 0){
         for (n = 0; n < num_joints; n++) {
+            //Ignore unhomed joints
+            if(!*joints[n].homed){
+                break;
+            }
             double v = *joints[n].vel_cmd_in;
             double stop_dist = v * v / ( 2 * joints[n].acc_max );
 
@@ -264,8 +277,8 @@ static void process(void *arg, long period)
             //Check for sign change: If new vel and old vel have different sign, we are done
             if( vel_old * *joints[n].vel_cmd_out < 0){
                 joints[n].state=0;
-                *joints[n].vel_cmd_out = 0;
                 *joints[n].acc_cmd_out = 0;
+                *joints[n].vel_cmd_out = 0;
             }else{
                 done = false;
             }

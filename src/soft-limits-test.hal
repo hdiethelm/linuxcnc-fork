@@ -6,6 +6,7 @@ loadrt threads name1=test-thread period1=1000000
 setp soft_limits.0.acc-max 10
 setp soft_limits.0.min-pos-limit 0
 setp soft_limits.0.max-pos-limit 200
+setp soft_limits.0.homed 1
 
 addf soft_limits.process test-thread
 
