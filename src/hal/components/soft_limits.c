@@ -200,21 +200,23 @@ static void process(void *arg, long period)
 {
     (void)arg;
     int n;
-
+    const double tol = 0.000000000001;
     for (n = 0; n < num_joints; n++) {
-        if (*joints[n].pos_cmd_in > joints[n].max_pos_limit + 0.000000000001) {
+        if (*joints[n].pos_cmd_in > joints[n].max_pos_limit + tol || *joints[n].pos_cmd_out > joints[n].max_pos_limit + tol) {
             if ( joints[n].state != 2 ) {
-                rtapi_print_msg(RTAPI_MSG_ERR, "soft_limits: ERROR: limits will are exceided! pos %f limit %f joint %d\n", *joints[n].pos_cmd_in, joints[n].max_pos_limit, n);
+                rtapi_print_msg(RTAPI_MSG_ERR, "soft_limits: ERROR: limits are exceided! pos %f limit %f joint %d\n", *joints[n].pos_cmd_in, joints[n].max_pos_limit, n);
             }
             joints[n].state=2;
             *joints[n].fault_out=1;
+            *joints[n].pos_lim_sw_out=1;
             data->state=3;
-        }else if (*joints[n].pos_cmd_in < joints[n].min_pos_limit - 0.000000000001) {
+        }
+        if (*joints[n].pos_cmd_in < joints[n].min_pos_limit - tol || *joints[n].pos_cmd_out < joints[n].min_pos_limit - tol) {
             if ( joints[n].state != 2 ) {
-                rtapi_print_msg(RTAPI_MSG_ERR, "soft_limits: ERROR: limits will are exceided! pos %f limit %f joint %d\n", *joints[n].pos_cmd_in, joints[n].min_pos_limit, n);
+                rtapi_print_msg(RTAPI_MSG_ERR, "soft_limits: ERROR: limits are exceided! pos %f limit %f joint %d\n", *joints[n].pos_cmd_in, joints[n].min_pos_limit, n);
             }
             joints[n].state=2;
-            *joints[n].fault_out=1;
+            *joints[n].neg_lim_sw_out=1;
             data->state=3;
         }
     }
@@ -231,7 +233,7 @@ static void process(void *arg, long period)
             *joints[n].pos_lim_sw_out = *joints[n].pos_lim_sw_in;
             *joints[n].neg_lim_sw_out = *joints[n].neg_lim_sw_in;
 
-            if (v > 0 && *joints[n].pos_cmd_in > joints[n].max_pos_limit - stop_dist + 0.000000000001) {
+            if (v > 0 && *joints[n].pos_cmd_in > joints[n].max_pos_limit - stop_dist + tol) {
                 if ( joints[n].state != 1 ) {
                     rtapi_print_msg(RTAPI_MSG_ERR, "soft_limits: ERROR: limits will be exceided! stop dist = %f pos %f vel %f limit %f joint %d\n", stop_dist, *joints[n].pos_cmd_in, *joints[n].vel_cmd_in, joints[n].max_pos_limit, n);
                 }
@@ -239,7 +241,7 @@ static void process(void *arg, long period)
                 *joints[n].fault_out=1;
                 data->state=1;
             }
-            else if (v < 0 && *joints[n].pos_cmd_in < joints[n].min_pos_limit + stop_dist - 0.000000000001) {
+            if (v < 0 && *joints[n].pos_cmd_in < joints[n].min_pos_limit + stop_dist - tol) {
                 if ( joints[n].state != 1 ) {
                     rtapi_print_msg(RTAPI_MSG_ERR, "soft_limits: ERROR: limits will be exceided! stop dist = %f pos %f vel %f limit %f joint %d\n", stop_dist, *joints[n].pos_cmd_in, *joints[n].vel_cmd_in, joints[n].min_pos_limit, n);
                 }
@@ -260,11 +262,12 @@ static void process(void *arg, long period)
             double vel_old = *joints[n].vel_cmd_out;
             *joints[n].vel_cmd_out += *joints[n].acc_cmd_out * dt;
             //Check for sign change: If new vel and old vel have different sign, we are done
-            if( vel_old * *joints[n].vel_cmd_out > 0){
-                    done = false;
+            if( vel_old * *joints[n].vel_cmd_out < 0){
+                joints[n].state=0;
+                *joints[n].vel_cmd_out = 0;
+                *joints[n].acc_cmd_out = 0;
             }else{
-                    *joints[n].vel_cmd_out = 0;
-                    *joints[n].acc_cmd_out = 0;
+                done = false;
             }
             *joints[n].pos_cmd_out += *joints[n].vel_cmd_out * dt;
         }
