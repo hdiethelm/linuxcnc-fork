@@ -32,7 +32,10 @@ RTAPI_MP_INT(num_joints, "Number of joints");
 
 /* Data needed for each input */
 typedef struct {
+    //HAL
     hal_float_t acc_max;
+    hal_float_t min_pos_limit;
+    hal_float_t max_pos_limit;
     
     hal_float_t *pos_cmd_in;
     hal_float_t *vel_cmd_in;
@@ -47,6 +50,9 @@ typedef struct {
     hal_bit_t *neg_lim_sw_out;
 
     hal_bit_t *fault_out;
+
+    //Other
+    int state;
 } soft_limits_joint_t;
 
 #define MAX_JOINTS    8
@@ -54,6 +60,7 @@ typedef struct {
 /* Base data for a weighted summer. */
 typedef struct {
   hal_bit_t *estop_out;
+  int state;
 } soft_limits_data_t;
 
 /* other globals */
@@ -108,6 +115,7 @@ int rtapi_app_main(void)
         cleanup();
         return -1;
     }
+    data->state=0;
 
     joints = hal_malloc(num_joints * sizeof(soft_limits_joint_t));
     if (joints == 0) {
@@ -120,6 +128,10 @@ int rtapi_app_main(void)
     /* export pins/params for all joints */
     for (n = 0; n < num_joints; n++) {
         retval=hal_param_float_newf(HAL_RW, &(joints[n].acc_max), comp_id, "soft_limits.%d.acc-max", n);
+        if (retval != 0) {return -1;}
+        retval=hal_param_float_newf(HAL_RW, &(joints[n].min_pos_limit), comp_id, "soft_limits.%d.min-pos-limit", n);
+        if (retval != 0) {return -1;}
+        retval=hal_param_float_newf(HAL_RW, &(joints[n].max_pos_limit), comp_id, "soft_limits.%d.max-pos-limit", n);
         if (retval != 0) {return -1;}
 
         retval=hal_pin_float_newf(HAL_IN, &(joints[n].pos_cmd_in), comp_id, "soft_limits.%d.pos-cmd-in", n);
@@ -148,7 +160,7 @@ int rtapi_app_main(void)
         if (retval != 0) {return -1;}
 
         //ToDo: Init!
-        joints[n].fault_out=0;
+        joints[n].state=0;
     }
 
     /* export "global" pins */
@@ -182,6 +194,36 @@ static void process(void *arg, long period)
 {
     (void)arg;
     (void)period;
+    int n;
+    if(data->state == 0){
+        for (n = 0; n < num_joints; n++) {
+            double v = *joints[n].vel_cmd_in;
+            double stop_dist = v * v / ( 2 * joints[n].acc_max );
+
+            *joints[n].pos_cmd_out = *joints[n].pos_cmd_in;
+            *joints[n].vel_cmd_out = *joints[n].vel_cmd_in;
+            *joints[n].pos_fb_out = *joints[n].pos_fb_in;
+            *joints[n].pos_lim_sw_out = *joints[n].pos_lim_sw_in;
+            *joints[n].neg_lim_sw_out = *joints[n].neg_lim_sw_in;
+
+            if (v > 0 && *joints[n].pos_cmd_in > joints[n].max_pos_limit - stop_dist + 0.000000000001) {
+                if ( joints[n].state == 0 ) {
+                    rtapi_print_msg(RTAPI_MSG_ERR, "soft_limits: StopDist = %f pos %f vel %f limit %f joint %d\n", stop_dist, *joints[n].pos_cmd_in, *joints[n].vel_cmd_in, joints[n].max_pos_limit, n);
+                }
+                joints[n].state=1;
+                *joints[n].fault_out=1;
+                data->state=1;
+            }
+            else if (v < 0 && *joints[n].pos_cmd_in < joints[n].min_pos_limit + stop_dist - 0.000000000001) {
+                if ( joints[n].state == 0 ) {
+                    rtapi_print_msg(RTAPI_MSG_ERR, "soft_limits: StopDist = %f pos %f vel %f limit %f joint %d\n", stop_dist, *joints[n].pos_cmd_in, *joints[n].vel_cmd_in, joints[n].min_pos_limit, n);
+                }
+                joints[n].state=1;
+                *joints[n].fault_out=1;
+                data->state=1;
+            }
+        }
+    }
 }
 
 /***********************************************************************
