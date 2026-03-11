@@ -32,6 +32,10 @@ net XposMoSl joint.0.motor-offset => soft_limits.0.motor-offset
 net YposMoSl joint.1.motor-offset => soft_limits.1.motor-offset
 net ZposMoSl joint.2.motor-offset => soft_limits.2.motor-offset
 
+net XposMbSl joint.0.backlash-filt => soft_limits.0.backlash-filt
+net YposMbSl joint.1.backlash-filt => soft_limits.1.backlash-filt
+net ZposMbSl joint.2.backlash-filt => soft_limits.2.backlash-filt
+
 net XposMSl joint.0.motor-pos-cmd => soft_limits.0.motor-pos-cmd-in
 net YposMSl joint.1.motor-pos-cmd => soft_limits.1.motor-pos-cmd-in
 net ZposMSl joint.2.motor-pos-cmd => soft_limits.2.motor-pos-cmd-in

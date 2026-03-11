@@ -39,8 +39,8 @@ typedef struct {
     hal_float_t max_pos_limit;
     
     hal_bit_t *homed;
-
     hal_float_t *motor_offset;
+    hal_float_t *backlash_filt;
 
     hal_float_t *motor_pos_cmd_in;
     hal_float_t *pos_cmd_in;
@@ -147,10 +147,12 @@ int rtapi_app_main(void)
 
         retval=hal_pin_bit_newf(HAL_IN, &(joints[n].homed), comp_id, "soft_limits.%d.homed", n);
         if (retval != 0) {cleanup(); return -1;}
+        retval=hal_pin_float_newf(HAL_IN, &(joints[n].motor_offset), comp_id, "soft_limits.%d.motor-offset", n);
+        if (retval != 0) {cleanup(); return -1;}
+        retval=hal_pin_float_newf(HAL_IN, &(joints[n].backlash_filt), comp_id, "soft_limits.%d.backlash-filt", n);
+        if (retval != 0) {cleanup(); return -1;}
 
         retval=hal_pin_float_newf(HAL_IN, &(joints[n].motor_pos_cmd_in), comp_id, "soft_limits.%d.motor-pos-cmd-in", n);
-        if (retval != 0) {cleanup(); return -1;}
-        retval=hal_pin_float_newf(HAL_IN, &(joints[n].motor_offset), comp_id, "soft_limits.%d.motor-offset", n);
         if (retval != 0) {cleanup(); return -1;}
         retval=hal_pin_float_newf(HAL_IN, &(joints[n].pos_cmd_in), comp_id, "soft_limits.%d.pos-cmd-in", n);
         if (retval != 0) {cleanup(); return -1;}
@@ -289,7 +291,10 @@ static void process(void *arg, long period)
             //ToDo: And now, what to do with it?
 
             //Check if motor and joint commands are in sync
-            double pos_error = *joints[n].motor_pos_cmd_in - *joints[n].pos_cmd_in - *joints[n].motor_offset;
+            //Code in control.c:
+            // joint->motor_pos_cmd = joint->pos_cmd + joint->backlash_filt + joint->motor_offset;
+            //-> joint->motor_pos_cmd - joint->pos_cmd - joint->backlash_filt - joint->motor_offset = 0
+            double pos_error = *joints[n].motor_pos_cmd_in - *joints[n].pos_cmd_in - *joints[n].backlash_filt - *joints[n].motor_offset;
             if(fabs(pos_error) > 1e-6){
                 if ( joints[n].state != 1 ) {
                     rtapi_print_msg(RTAPI_MSG_ERR, "soft_limits: ERROR: motor pos inconsistent! pos_error = %f pos in %f motor in %f motor offset %f joint %d\n", 
