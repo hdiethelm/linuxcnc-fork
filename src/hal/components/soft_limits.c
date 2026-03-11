@@ -217,6 +217,11 @@ static void process(void *arg, long period)
     const double tol = 0.000000000001;
     const double dt = period * 1e-9;
 
+    if(dt < 1e-8){
+        rtapi_print_msg(RTAPI_MSG_ERR, "soft_limits: WARNING: dt = %f us\n", dt*1e6);
+        return;
+    }
+
     for (n = 0; n < num_joints; n++) {
         //Ignore unhomed joints
         if(!*joints[n].homed){
@@ -256,12 +261,12 @@ static void process(void *arg, long period)
                 break;
             }
 
-            //Estimate velocity
-            double k_lp=0.02/dt; //tau/dt
+            //Estimate velocity based of position to verify linuxcnc is not lying
+            double k_lp=0.005/dt; //tau/dt
             double pos_lp_new = (*joints[n].pos_lp*k_lp + *joints[n].pos_cmd_in)/(1.0+k_lp);
             *joints[n].vel_est = (pos_lp_new - *joints[n].pos_lp)/dt;
             *joints[n].pos_lp = pos_lp_new;
-
+            //ToDo: And now, what to do with it?
 
             double v = *joints[n].vel_cmd_in;
             double stop_dist = v * v / ( 2 * joints[n].acc_max );

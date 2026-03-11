@@ -10,6 +10,8 @@ loadrt ddt names=ddt_x,ddt_xv,ddt_y,ddt_yv,ddt_z,ddt_zv
 # load additional blocks
 loadrt hypot names=vel_xy,vel_xyz
 
+loadrt soft_limits num_joints=3
+
 # add motion controller functions to servo thread
 addf motion-command-handler servo-thread
 addf motion-controller servo-thread
@@ -22,6 +24,37 @@ addf ddt_z servo-thread
 addf ddt_zv servo-thread
 addf vel_xy servo-thread
 addf vel_xyz servo-thread
+addf soft_limits.process servo-thread
+
+#Create soft_limits connections
+
+net XposSl joint.0.pos-cmd => soft_limits.0.pos-cmd-in
+net YposSl joint.1.pos-cmd => soft_limits.1.pos-cmd-in
+net ZposSl joint.2.pos-cmd => soft_limits.2.pos-cmd-in
+
+net XvelSl joint.0.vel-cmd => soft_limits.0.vel-cmd-in
+net YvelSl joint.1.vel-cmd => soft_limits.1.vel-cmd-in
+net ZvelSl joint.2.vel-cmd => soft_limits.2.vel-cmd-in
+
+net XaccSl joint.0.acc-cmd => soft_limits.0.acc-cmd-in
+net YaccSl joint.1.acc-cmd => soft_limits.1.acc-cmd-in
+net ZaccSl joint.2.acc-cmd => soft_limits.2.acc-cmd-in
+
+net XhomedSl joint.0.homed => soft_limits.0.homed
+net YhomedSl joint.1.homed => soft_limits.1.homed
+net ZhomedSl joint.2.homed => soft_limits.2.homed
+
+setp soft_limits.0.acc-max [JOINT_0]MAX_ACCELERATION
+setp soft_limits.0.min-pos-limit [JOINT_0]MIN_LIMIT
+setp soft_limits.0.max-pos-limit [JOINT_0]MAX_LIMIT
+
+setp soft_limits.1.acc-max [JOINT_1]MAX_ACCELERATION
+setp soft_limits.1.min-pos-limit [JOINT_1]MIN_LIMIT
+setp soft_limits.1.max-pos-limit [JOINT_1]MAX_LIMIT
+
+setp soft_limits.2.acc-max [JOINT_2]MAX_ACCELERATION
+setp soft_limits.2.min-pos-limit [JOINT_2]MIN_LIMIT
+setp soft_limits.2.max-pos-limit [JOINT_2]MAX_LIMIT
 
 # create HAL signals for position commands from motion module
 # loop position commands back to motion module feedback
