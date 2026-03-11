@@ -28,6 +28,14 @@ addf soft_limits.process servo-thread
 
 #Create soft_limits connections
 
+net XposMoSl joint.0.motor-offset => soft_limits.0.motor-offset
+net YposMoSl joint.1.motor-offset => soft_limits.1.motor-offset
+net ZposMoSl joint.2.motor-offset => soft_limits.2.motor-offset
+
+net XposMSl joint.0.motor-pos-cmd => soft_limits.0.motor-pos-cmd-in
+net YposMSl joint.1.motor-pos-cmd => soft_limits.1.motor-pos-cmd-in
+net ZposMSl joint.2.motor-pos-cmd => soft_limits.2.motor-pos-cmd-in
+
 net XposSl joint.0.pos-cmd => soft_limits.0.pos-cmd-in
 net YposSl joint.1.pos-cmd => soft_limits.1.pos-cmd-in
 net ZposSl joint.2.pos-cmd => soft_limits.2.pos-cmd-in
@@ -58,9 +66,9 @@ setp soft_limits.2.max-pos-limit [JOINT_2]MAX_LIMIT
 
 # create HAL signals for position commands from motion module
 # loop position commands back to motion module feedback
-net Xpos joint.0.motor-pos-cmd => joint.0.motor-pos-fb ddt_x.in
-net Ypos joint.1.motor-pos-cmd => joint.1.motor-pos-fb ddt_y.in
-net Zpos joint.2.motor-pos-cmd => joint.2.motor-pos-fb ddt_z.in
+net Xpos soft_limits.0.motor-pos-cmd-out => joint.0.motor-pos-fb ddt_x.in
+net Ypos soft_limits.1.motor-pos-cmd-out => joint.1.motor-pos-fb ddt_y.in
+net Zpos soft_limits.2.motor-pos-cmd-out => joint.2.motor-pos-fb ddt_z.in
 
 # send the position commands thru differentiators to
 # generate velocity and accel signals

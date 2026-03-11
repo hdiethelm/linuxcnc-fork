@@ -18,6 +18,7 @@
 #include <rtapi.h>          /* RTAPI realtime OS API */
 #include <rtapi_app.h>      /* RTAPI realtime module decls */
 #include <hal.h>            /* HAL public API decls */
+#include <math.h>
 
 /* module information */
 MODULE_AUTHOR("Hannes Diethelm");
@@ -39,6 +40,9 @@ typedef struct {
     
     hal_bit_t *homed;
 
+    hal_float_t *motor_offset;
+
+    hal_float_t *motor_pos_cmd_in;
     hal_float_t *pos_cmd_in;
     hal_float_t *vel_cmd_in;
     hal_float_t *acc_cmd_in;
@@ -47,6 +51,7 @@ typedef struct {
     hal_bit_t *neg_lim_sw_in;
 
     hal_float_t *pos_cmd_out;
+    hal_float_t *motor_pos_cmd_out;
     hal_float_t *vel_cmd_out;
     hal_float_t *acc_cmd_out;
     hal_float_t *pos_fb_out;
@@ -143,6 +148,10 @@ int rtapi_app_main(void)
         retval=hal_pin_bit_newf(HAL_IN, &(joints[n].homed), comp_id, "soft_limits.%d.homed", n);
         if (retval != 0) {cleanup(); return -1;}
 
+        retval=hal_pin_float_newf(HAL_IN, &(joints[n].motor_offset), comp_id, "soft_limits.%d.motor-offset", n);
+        if (retval != 0) {cleanup(); return -1;}
+        retval=hal_pin_float_newf(HAL_IN, &(joints[n].motor_pos_cmd_in), comp_id, "soft_limits.%d.motor-pos-cmd-in", n);
+        if (retval != 0) {cleanup(); return -1;}
         retval=hal_pin_float_newf(HAL_IN, &(joints[n].pos_cmd_in), comp_id, "soft_limits.%d.pos-cmd-in", n);
         if (retval != 0) {cleanup(); return -1;}
         retval=hal_pin_float_newf(HAL_IN, &(joints[n].vel_cmd_in), comp_id, "soft_limits.%d.vel-cmd-in", n);
@@ -157,6 +166,8 @@ int rtapi_app_main(void)
         if (retval != 0) {cleanup(); return -1;}
 
         retval=hal_pin_float_newf(HAL_OUT, &(joints[n].pos_cmd_out), comp_id, "soft_limits.%d.pos-cmd-out", n);
+        if (retval != 0) {cleanup(); return -1;}
+        retval=hal_pin_float_newf(HAL_OUT, &(joints[n].motor_pos_cmd_out), comp_id, "soft_limits.%d.motor-pos-cmd-out", n);
         if (retval != 0) {cleanup(); return -1;}
         retval=hal_pin_float_newf(HAL_OUT, &(joints[n].vel_cmd_out), comp_id, "soft_limits.%d.vel-cmd-out", n);
         if (retval != 0) {cleanup(); return -1;}
@@ -214,7 +225,8 @@ static void process(void *arg, long period)
 {
     (void)arg;
     int n;
-    const double tol = 0.000000000001;
+    const double tol1 = 0.000000000001;
+    const double tol2 = 1.0; //ToDo: and for inch machines?
     const double dt = period * 1e-9;
 
     if(dt < 1e-8){
@@ -227,9 +239,9 @@ static void process(void *arg, long period)
         if(!*joints[n].homed){
             break;
         }
-        if (*joints[n].pos_cmd_in > joints[n].max_pos_limit + tol || 
-            *joints[n].pos_cmd_out > joints[n].max_pos_limit + tol ||
-            *joints[n].pos_fb_in > joints[n].max_pos_limit + tol
+        if ((data->state == 0 && *joints[n].pos_cmd_in > joints[n].max_pos_limit + tol2 ) || 
+            *joints[n].pos_cmd_out > joints[n].max_pos_limit + tol2 ||
+            *joints[n].pos_fb_in > joints[n].max_pos_limit + tol2
         ) {
             if ( joints[n].state != 2 ) {
                 rtapi_print_msg(RTAPI_MSG_ERR, "soft_limits: ERROR: limits are exceided (max_pos_limit)! pos in %f pos out %f pos fb %f limit %f joint %d\n", 
@@ -240,9 +252,9 @@ static void process(void *arg, long period)
             *joints[n].pos_lim_sw_out=1;
             data->state=3;
         }
-        if (*joints[n].pos_cmd_in < joints[n].min_pos_limit - tol || 
-            *joints[n].pos_cmd_out < joints[n].min_pos_limit - tol ||
-            *joints[n].pos_fb_in < joints[n].min_pos_limit - tol
+        if ((data->state == 0 && *joints[n].pos_cmd_in < joints[n].min_pos_limit - tol2 ) || 
+            *joints[n].pos_cmd_out < joints[n].min_pos_limit - tol2 ||
+            *joints[n].pos_fb_in < joints[n].min_pos_limit - tol2
         ) {
             if ( joints[n].state != 2 ) {
                 rtapi_print_msg(RTAPI_MSG_ERR, "soft_limits: ERROR: limits are exceided (min_pos_limit)! pos in %f pos out %f pos fb %f limit %f joint %d\n", 
@@ -256,9 +268,17 @@ static void process(void *arg, long period)
 
     if(data->state == 0){
         for (n = 0; n < num_joints; n++) {
+            *joints[n].motor_pos_cmd_out = *joints[n].motor_pos_cmd_in;
+            *joints[n].pos_cmd_out = *joints[n].pos_cmd_in;
+            *joints[n].vel_cmd_out = *joints[n].vel_cmd_in;
+            *joints[n].acc_cmd_out = *joints[n].acc_cmd_out;
+            *joints[n].pos_fb_out = *joints[n].pos_fb_in;
+            *joints[n].pos_lim_sw_out = *joints[n].pos_lim_sw_in;
+            *joints[n].neg_lim_sw_out = *joints[n].neg_lim_sw_in;
+
             //Ignore unhomed joints
             if(!*joints[n].homed){
-                break;
+                continue;
             }
 
             //Estimate velocity based of position to verify linuxcnc is not lying
@@ -268,18 +288,23 @@ static void process(void *arg, long period)
             *joints[n].pos_lp = pos_lp_new;
             //ToDo: And now, what to do with it?
 
+            //Check if motor and joint commands are in sync
+            double pos_error = *joints[n].motor_pos_cmd_in - *joints[n].pos_cmd_in - *joints[n].motor_offset;
+            if(fabs(pos_error) > 1e-6){
+                if ( joints[n].state != 1 ) {
+                    rtapi_print_msg(RTAPI_MSG_ERR, "soft_limits: ERROR: motor pos inconsistent! pos_error = %f pos in %f motor in %f motor offset %f joint %d\n", 
+                        pos_error, *joints[n].pos_cmd_in, *joints[n].motor_pos_cmd_in, *joints[n].motor_offset, n);
+                    joints[n].state=1;
+                    *joints[n].fault_out=1;
+                    data->state=1;
+                }
+            }
+
             double v = *joints[n].vel_cmd_in;
             double stop_dist = v * v / ( 2 * joints[n].acc_max );
 
-            *joints[n].pos_cmd_out = *joints[n].pos_cmd_in;
-            *joints[n].vel_cmd_out = *joints[n].vel_cmd_in;
-            *joints[n].acc_cmd_out = *joints[n].acc_cmd_out;
-            *joints[n].pos_fb_out = *joints[n].pos_fb_in;
-            *joints[n].pos_lim_sw_out = *joints[n].pos_lim_sw_in;
-            *joints[n].neg_lim_sw_out = *joints[n].neg_lim_sw_in;
-
             //Only pos_cmd_in / pos_fb_in needs to be checked due to ^^
-            double max_pos_vel = joints[n].max_pos_limit - stop_dist + tol;
+            double max_pos_vel = joints[n].max_pos_limit - stop_dist + tol1;
             if (v > 0 && (*joints[n].pos_cmd_in > max_pos_vel || *joints[n].pos_fb_in > max_pos_vel)) {
                 if ( joints[n].state != 1 ) {
                     rtapi_print_msg(RTAPI_MSG_ERR, "soft_limits: ERROR: limits will be exceided (max_pos_limit)! stop dist = %f pos in %f pos fb %f vel %f limit %f joint %d\n", 
@@ -289,7 +314,7 @@ static void process(void *arg, long period)
                 *joints[n].fault_out=1;
                 data->state=1;
             }
-            double min_pos_vel = joints[n].min_pos_limit + stop_dist - tol;
+            double min_pos_vel = joints[n].min_pos_limit + stop_dist - tol1;
             if (v < 0 && (*joints[n].pos_cmd_in < min_pos_vel || *joints[n].pos_fb_in < min_pos_vel)) {
                 if ( joints[n].state != 1 ) {
                     rtapi_print_msg(RTAPI_MSG_ERR, "soft_limits: ERROR: limits will be exceided (min_pos_limit)! stop dist = %f pos in %f pos fb %f vel %f limit %f joint %d\n", 
@@ -318,6 +343,7 @@ static void process(void *arg, long period)
             }else{
                 done = false;
             }
+            *joints[n].motor_pos_cmd_out += *joints[n].vel_cmd_out * dt;
             *joints[n].pos_cmd_out += *joints[n].vel_cmd_out * dt;
         }
         if(done){
@@ -325,8 +351,21 @@ static void process(void *arg, long period)
             data->state = 2;
         }
     }else if(data->state == 2){
-        //Now what?
-        //data->state = 0;
+        //Wait for being unhomed to reset
+        bool homed=false;
+        for (n = 0; n < num_joints; n++) {
+            if(*joints[n].homed){
+                homed=true;
+            }
+        }
+        if(!homed){
+            for (n = 0; n < num_joints; n++) {
+                joints[n].state=1;
+                *joints[n].fault_out=1;
+            }
+            data->state = 3;
+            rtapi_print_msg(RTAPI_MSG_ERR, "soft_limits: reset fault\n");
+        }
     }else if(data->state == 3){
         *data->estop_out = 1;
     }
