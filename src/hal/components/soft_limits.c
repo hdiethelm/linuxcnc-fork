@@ -50,8 +50,8 @@ typedef struct {
     hal_bit_t *pos_lim_sw_in;
     hal_bit_t *neg_lim_sw_in;
 
-    hal_float_t *pos_cmd_out;
     hal_float_t *motor_pos_cmd_out;
+    hal_float_t *pos_cmd_out;
     hal_float_t *vel_cmd_out;
     hal_float_t *acc_cmd_out;
     hal_float_t *pos_fb_out;
@@ -148,9 +148,9 @@ int rtapi_app_main(void)
         retval=hal_pin_bit_newf(HAL_IN, &(joints[n].homed), comp_id, "soft_limits.%d.homed", n);
         if (retval != 0) {cleanup(); return -1;}
 
-        retval=hal_pin_float_newf(HAL_IN, &(joints[n].motor_offset), comp_id, "soft_limits.%d.motor-offset", n);
-        if (retval != 0) {cleanup(); return -1;}
         retval=hal_pin_float_newf(HAL_IN, &(joints[n].motor_pos_cmd_in), comp_id, "soft_limits.%d.motor-pos-cmd-in", n);
+        if (retval != 0) {cleanup(); return -1;}
+        retval=hal_pin_float_newf(HAL_IN, &(joints[n].motor_offset), comp_id, "soft_limits.%d.motor-offset", n);
         if (retval != 0) {cleanup(); return -1;}
         retval=hal_pin_float_newf(HAL_IN, &(joints[n].pos_cmd_in), comp_id, "soft_limits.%d.pos-cmd-in", n);
         if (retval != 0) {cleanup(); return -1;}
@@ -165,9 +165,9 @@ int rtapi_app_main(void)
         retval=hal_pin_bit_newf(HAL_IN, &(joints[n].neg_lim_sw_in), comp_id, "soft_limits.%d.neg-lim-sw-in", n);
         if (retval != 0) {cleanup(); return -1;}
 
-        retval=hal_pin_float_newf(HAL_OUT, &(joints[n].pos_cmd_out), comp_id, "soft_limits.%d.pos-cmd-out", n);
-        if (retval != 0) {cleanup(); return -1;}
         retval=hal_pin_float_newf(HAL_OUT, &(joints[n].motor_pos_cmd_out), comp_id, "soft_limits.%d.motor-pos-cmd-out", n);
+        if (retval != 0) {cleanup(); return -1;}
+        retval=hal_pin_float_newf(HAL_OUT, &(joints[n].pos_cmd_out), comp_id, "soft_limits.%d.pos-cmd-out", n);
         if (retval != 0) {cleanup(); return -1;}
         retval=hal_pin_float_newf(HAL_OUT, &(joints[n].vel_cmd_out), comp_id, "soft_limits.%d.vel-cmd-out", n);
         if (retval != 0) {cleanup(); return -1;}
@@ -331,15 +331,15 @@ static void process(void *arg, long period)
             if(joints[n].state==0){
                 continue;
             }
+            double acc_cmd_out_old = *joints[n].acc_cmd_out;
             if(*joints[n].vel_cmd_out > 0){
                     *joints[n].acc_cmd_out = - joints[n].acc_max;
             }else{
                     *joints[n].acc_cmd_out = + joints[n].acc_max;
             }
-            double vel_cmd_out_old = *joints[n].vel_cmd_out;
             *joints[n].vel_cmd_out += *joints[n].acc_cmd_out * dt;
-            //Check for sign change: If new vel and old vel have different sign, we are done
-            if( vel_cmd_out_old * *joints[n].vel_cmd_out < 0){
+            //Check for sign change: If old and nev acc have different sign, we are done
+            if( acc_cmd_out_old * *joints[n].acc_cmd_out < 0){
                 joints[n].state=0;
                 *joints[n].acc_cmd_out = 0;
                 *joints[n].vel_cmd_out = 0;
