@@ -57,6 +57,8 @@ typedef struct {
 
     //Other
     int state;
+    hal_float_t *pos_lp;
+    hal_float_t *vel_est;
 } soft_limits_joint_t;
 
 #define MAX_JOINTS    8
@@ -170,8 +172,15 @@ int rtapi_app_main(void)
         retval=hal_pin_bit_newf(HAL_OUT, &(joints[n].fault_out), comp_id, "soft_limits.%d.fault-out", n);
         if (retval != 0) {cleanup(); return -1;}
 
+        retval=hal_pin_float_newf(HAL_OUT, &(joints[n].pos_lp), comp_id, "soft_limits.%d.pos-lp", n);
+        if (retval != 0) {cleanup(); return -1;}
+        retval=hal_pin_float_newf(HAL_OUT, &(joints[n].vel_est), comp_id, "soft_limits.%d.vel-est", n);
+        if (retval != 0) {cleanup(); return -1;}
+
         //ToDo: Init!
         joints[n].state=0;
+        *joints[n].pos_lp=0;
+        *joints[n].vel_est=0;
     }
 
     /* export "global" pins */
@@ -206,6 +215,8 @@ static void process(void *arg, long period)
     (void)arg;
     int n;
     const double tol = 0.000000000001;
+    const double dt = period * 1e-9;
+
     for (n = 0; n < num_joints; n++) {
         //Ignore unhomed joints
         if(!*joints[n].homed){
@@ -244,6 +255,14 @@ static void process(void *arg, long period)
             if(!*joints[n].homed){
                 break;
             }
+
+            //Estimate velocity
+            double k_lp=0.02/dt; //tau/dt
+            double pos_lp_new = (*joints[n].pos_lp*k_lp + *joints[n].pos_cmd_in)/(1.0+k_lp);
+            *joints[n].vel_est = (pos_lp_new - *joints[n].pos_lp)/dt;
+            *joints[n].pos_lp = pos_lp_new;
+
+
             double v = *joints[n].vel_cmd_in;
             double stop_dist = v * v / ( 2 * joints[n].acc_max );
 
@@ -277,7 +296,6 @@ static void process(void *arg, long period)
             }
         }
     }else if(data->state == 1){
-        double dt = period * 1e-9;
         bool done = true;
         for (n = 0; n < num_joints; n++) {
             if(*joints[n].vel_cmd_out > 0){
