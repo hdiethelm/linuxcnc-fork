@@ -211,18 +211,26 @@ static void process(void *arg, long period)
         if(!*joints[n].homed){
             break;
         }
-        if (*joints[n].pos_cmd_in > joints[n].max_pos_limit + tol || *joints[n].pos_cmd_out > joints[n].max_pos_limit + tol) {
+        if (*joints[n].pos_cmd_in > joints[n].max_pos_limit + tol || 
+            *joints[n].pos_cmd_out > joints[n].max_pos_limit + tol ||
+            *joints[n].pos_fb_in > joints[n].max_pos_limit + tol
+        ) {
             if ( joints[n].state != 2 ) {
-                rtapi_print_msg(RTAPI_MSG_ERR, "soft_limits: ERROR: limits are exceided! pos %f limit %f joint %d\n", *joints[n].pos_cmd_in, joints[n].max_pos_limit, n);
+                rtapi_print_msg(RTAPI_MSG_ERR, "soft_limits: ERROR: limits are exceided (max_pos_limit)! pos in %f pos out %f pos fb %f limit %f joint %d\n", 
+                    *joints[n].pos_cmd_in, *joints[n].pos_cmd_out, *joints[n].pos_fb_in, joints[n].max_pos_limit, n);
             }
             joints[n].state=2;
             *joints[n].fault_out=1;
             *joints[n].pos_lim_sw_out=1;
             data->state=3;
         }
-        if (*joints[n].pos_cmd_in < joints[n].min_pos_limit - tol || *joints[n].pos_cmd_out < joints[n].min_pos_limit - tol) {
+        if (*joints[n].pos_cmd_in < joints[n].min_pos_limit - tol || 
+            *joints[n].pos_cmd_out < joints[n].min_pos_limit - tol ||
+            *joints[n].pos_fb_in < joints[n].min_pos_limit - tol
+        ) {
             if ( joints[n].state != 2 ) {
-                rtapi_print_msg(RTAPI_MSG_ERR, "soft_limits: ERROR: limits are exceided! pos %f limit %f joint %d\n", *joints[n].pos_cmd_in, joints[n].min_pos_limit, n);
+                rtapi_print_msg(RTAPI_MSG_ERR, "soft_limits: ERROR: limits are exceided (min_pos_limit)! pos in %f pos out %f pos fb %f limit %f joint %d\n", 
+                    *joints[n].pos_cmd_in, *joints[n].pos_cmd_out, *joints[n].pos_fb_in, joints[n].min_pos_limit, n);
             }
             joints[n].state=2;
             *joints[n].neg_lim_sw_out=1;
@@ -246,17 +254,22 @@ static void process(void *arg, long period)
             *joints[n].pos_lim_sw_out = *joints[n].pos_lim_sw_in;
             *joints[n].neg_lim_sw_out = *joints[n].neg_lim_sw_in;
 
-            if (v > 0 && *joints[n].pos_cmd_in > joints[n].max_pos_limit - stop_dist + tol) {
+            //Only pos_cmd_in / pos_fb_in needs to be checked due to ^^
+            double max_pos_vel = joints[n].max_pos_limit - stop_dist + tol;
+            if (v > 0 && (*joints[n].pos_cmd_in > max_pos_vel || *joints[n].pos_fb_in > max_pos_vel)) {
                 if ( joints[n].state != 1 ) {
-                    rtapi_print_msg(RTAPI_MSG_ERR, "soft_limits: ERROR: limits will be exceided! stop dist = %f pos %f vel %f limit %f joint %d\n", stop_dist, *joints[n].pos_cmd_in, *joints[n].vel_cmd_in, joints[n].max_pos_limit, n);
+                    rtapi_print_msg(RTAPI_MSG_ERR, "soft_limits: ERROR: limits will be exceided (max_pos_limit)! stop dist = %f pos in %f pos fb %f vel %f limit %f joint %d\n", 
+                        stop_dist, *joints[n].pos_cmd_in, *joints[n].pos_fb_in, *joints[n].vel_cmd_in, joints[n].max_pos_limit, n);
                 }
                 joints[n].state=1;
                 *joints[n].fault_out=1;
                 data->state=1;
             }
-            if (v < 0 && *joints[n].pos_cmd_in < joints[n].min_pos_limit + stop_dist - tol) {
+            double min_pos_vel = joints[n].min_pos_limit + stop_dist - tol;
+            if (v < 0 && (*joints[n].pos_cmd_in < min_pos_vel || *joints[n].pos_fb_in < min_pos_vel)) {
                 if ( joints[n].state != 1 ) {
-                    rtapi_print_msg(RTAPI_MSG_ERR, "soft_limits: ERROR: limits will be exceided! stop dist = %f pos %f vel %f limit %f joint %d\n", stop_dist, *joints[n].pos_cmd_in, *joints[n].vel_cmd_in, joints[n].min_pos_limit, n);
+                    rtapi_print_msg(RTAPI_MSG_ERR, "soft_limits: ERROR: limits will be exceided (min_pos_limit)! stop dist = %f pos in %f pos fb %f vel %f limit %f joint %d\n", 
+                        stop_dist, *joints[n].pos_cmd_in, *joints[n].pos_fb_in, *joints[n].vel_cmd_in, joints[n].min_pos_limit, n);
                 }
                 joints[n].state=1;
                 *joints[n].fault_out=1;
