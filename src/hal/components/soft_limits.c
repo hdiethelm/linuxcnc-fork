@@ -328,15 +328,18 @@ static void process(void *arg, long period)
     }else if(data->state == 1){
         bool done = true;
         for (n = 0; n < num_joints; n++) {
+            if(joints[n].state==0){
+                continue;
+            }
             if(*joints[n].vel_cmd_out > 0){
                     *joints[n].acc_cmd_out = - joints[n].acc_max;
             }else{
                     *joints[n].acc_cmd_out = + joints[n].acc_max;
             }
-            double vel_old = *joints[n].vel_cmd_out;
+            double vel_cmd_out_old = *joints[n].vel_cmd_out;
             *joints[n].vel_cmd_out += *joints[n].acc_cmd_out * dt;
             //Check for sign change: If new vel and old vel have different sign, we are done
-            if( vel_old * *joints[n].vel_cmd_out < 0){
+            if( vel_cmd_out_old * *joints[n].vel_cmd_out < 0){
                 joints[n].state=0;
                 *joints[n].acc_cmd_out = 0;
                 *joints[n].vel_cmd_out = 0;
@@ -360,10 +363,9 @@ static void process(void *arg, long period)
         }
         if(!homed){
             for (n = 0; n < num_joints; n++) {
-                joints[n].state=1;
-                *joints[n].fault_out=1;
+                *joints[n].fault_out=0;
             }
-            data->state = 3;
+            data->state = 0;
             rtapi_print_msg(RTAPI_MSG_ERR, "soft_limits: reset fault\n");
         }
     }else if(data->state == 3){
