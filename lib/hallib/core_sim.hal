@@ -70,9 +70,13 @@ setp soft_limits.2.max-pos-limit [JOINT_2]MAX_LIMIT
 
 # create HAL signals for position commands from motion module
 # loop position commands back to motion module feedback
-net Xpos soft_limits.0.motor-pos-cmd-out => joint.0.motor-pos-fb ddt_x.in
-net Ypos soft_limits.1.motor-pos-cmd-out => joint.1.motor-pos-fb ddt_y.in
-net Zpos soft_limits.2.motor-pos-cmd-out => joint.2.motor-pos-fb ddt_z.in
+net Xpos soft_limits.0.motor-pos-cmd-out => soft_limits.0.motor-pos-fb-in ddt_x.in
+net Ypos soft_limits.1.motor-pos-cmd-out => soft_limits.1.motor-pos-fb-in ddt_y.in
+net Zpos soft_limits.2.motor-pos-cmd-out => soft_limits.2.motor-pos-fb-in ddt_z.in
+
+net XposMSlfb soft_limits.0.motor-pos-fb-out => joint.0.motor-pos-fb
+net YposMSlfb soft_limits.1.motor-pos-fb-out => joint.1.motor-pos-fb
+net ZposMSlfb soft_limits.2.motor-pos-fb-out => joint.2.motor-pos-fb
 
 # send the position commands thru differentiators to
 # generate velocity and accel signals

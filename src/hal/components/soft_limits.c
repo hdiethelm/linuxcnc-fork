@@ -56,6 +56,7 @@ typedef struct {
     hal_float_t *backlash_filt;
 
     hal_float_t *motor_pos_cmd_in;
+    hal_float_t *motor_pos_fb_in;
     hal_float_t *pos_cmd_in;
     hal_float_t *vel_cmd_in;
     hal_float_t *acc_cmd_in;
@@ -64,6 +65,7 @@ typedef struct {
     hal_bit_t *neg_lim_sw_in;
 
     hal_float_t *motor_pos_cmd_out;
+    hal_float_t *motor_pos_fb_out;
     hal_float_t *pos_cmd_out;
     hal_float_t *vel_cmd_out;
     hal_float_t *acc_cmd_out;
@@ -168,6 +170,8 @@ int rtapi_app_main(void)
 
         retval=hal_pin_float_newf(HAL_IN, &(joint->motor_pos_cmd_in), comp_id, "soft_limits.%d.motor-pos-cmd-in", n);
         if (retval != 0) {cleanup(comp_id); return -1;}
+        retval=hal_pin_float_newf(HAL_IN, &(joint->motor_pos_fb_in), comp_id, "soft_limits.%d.motor-pos-fb-in", n);
+        if (retval != 0) {cleanup(comp_id); return -1;}
         retval=hal_pin_float_newf(HAL_IN, &(joint->pos_cmd_in), comp_id, "soft_limits.%d.pos-cmd-in", n);
         if (retval != 0) {cleanup(comp_id); return -1;}
         retval=hal_pin_float_newf(HAL_IN, &(joint->vel_cmd_in), comp_id, "soft_limits.%d.vel-cmd-in", n);
@@ -182,6 +186,8 @@ int rtapi_app_main(void)
         if (retval != 0) {cleanup(comp_id); return -1;}
 
         retval=hal_pin_float_newf(HAL_OUT, &(joint->motor_pos_cmd_out), comp_id, "soft_limits.%d.motor-pos-cmd-out", n);
+        if (retval != 0) {cleanup(comp_id); return -1;}
+        retval=hal_pin_float_newf(HAL_OUT, &(joint->motor_pos_fb_out), comp_id, "soft_limits.%d.motor-pos-fb-out", n);
         if (retval != 0) {cleanup(comp_id); return -1;}
         retval=hal_pin_float_newf(HAL_OUT, &(joint->pos_cmd_out), comp_id, "soft_limits.%d.pos-cmd-out", n);
         if (retval != 0) {cleanup(comp_id); return -1;}
@@ -256,7 +262,7 @@ static void process(void *arg, long period)
         if(!*joint->homed){
             break;
         }
-        if ((data->state != STATE_FAULT && *joint->pos_cmd_in > joint->max_pos_limit + tol2 ) || 
+        if ((data->state == STATE_OK && *joint->pos_cmd_in > joint->max_pos_limit + tol2 ) || 
             *joint->pos_cmd_out > joint->max_pos_limit + tol2 ||
             *joint->pos_fb_in > joint->max_pos_limit + tol2
         ) {
@@ -269,7 +275,7 @@ static void process(void *arg, long period)
             *joint->pos_lim_sw_out=1;
             data->state=STATE_FAULT;
         }
-        if ((data->state != STATE_FAULT && *joint->pos_cmd_in < joint->min_pos_limit - tol2 ) || 
+        if ((data->state == STATE_OK && *joint->pos_cmd_in < joint->min_pos_limit - tol2 ) || 
             *joint->pos_cmd_out < joint->min_pos_limit - tol2 ||
             *joint->pos_fb_in < joint->min_pos_limit - tol2
         ) {
@@ -288,6 +294,7 @@ static void process(void *arg, long period)
         for (n = 0; n < num_joints; n++) {
             soft_limits_joint_t *joint = &data->joints[n];
             *joint->motor_pos_cmd_out = *joint->motor_pos_cmd_in;
+            *joint->motor_pos_fb_out = *joint->motor_pos_fb_in;
             *joint->pos_cmd_out = *joint->pos_cmd_in;
             *joint->vel_cmd_out = *joint->vel_cmd_in;
             *joint->acc_cmd_out = *joint->acc_cmd_out;
@@ -356,6 +363,10 @@ static void process(void *arg, long period)
             soft_limits_joint_t *joint = &data->joints[n];
             *joint->pos_lim_sw_out = *joint->pos_lim_sw_in;
             *joint->neg_lim_sw_out = *joint->neg_lim_sw_in;
+
+            //Pretend motor is doing what is expected, so there is no following error
+            //ToDo: Shows wrong position in UI but a following error will trigger a shutdown so we can not break any more
+            *joint->motor_pos_fb_out = *joint->motor_pos_cmd_in;
         }
 
         bool done = true;
@@ -392,6 +403,10 @@ static void process(void *arg, long period)
             soft_limits_joint_t *joint = &data->joints[n];
             *joint->pos_lim_sw_out = *joint->pos_lim_sw_in;
             *joint->neg_lim_sw_out = *joint->neg_lim_sw_in;
+
+            //Pretend motor is doing what is expected, so there is no following error
+            //ToDo: Shows wrong position in UI but a following error will trigger a shutdown so we can not break any more
+            *joint->motor_pos_fb_out = *joint->motor_pos_cmd_in;
         }
 
         //Wait for being unhomed to reset
