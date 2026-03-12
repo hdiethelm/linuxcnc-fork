@@ -81,16 +81,14 @@ typedef struct {
 
 #define MAX_JOINTS    8
 
-/* Base data for a weighted summer. */
 typedef struct {
-  hal_bit_t *estop_out;
-  state_t state;
+    soft_limits_joint_t *joints;
+    hal_bit_t *estop_out;
+    state_t state;
+    int comp_id;
 } soft_limits_data_t;
 
-/* other globals */
-static int comp_id;        /* component ID */
-soft_limits_joint_t *joints;
-soft_limits_data_t *data;
+static soft_limits_data_t *data;
 
 /***********************************************************************
 *                  LOCAL FUNCTION DECLARATIONS                         *
@@ -102,7 +100,7 @@ static void process(void *arg, long period);
 *                       INIT AND EXIT CODE                             *
 ************************************************************************/
 
-static void cleanup(void){
+static void cleanup(int comp_id){
     hal_exit(comp_id);
 }
 
@@ -124,7 +122,7 @@ int rtapi_app_main(void)
     }
 
     /* have good config info, connect to the HAL */
-    comp_id = hal_init("soft_limits");
+    int comp_id = hal_init("soft_limits");
     if (comp_id < 0) {
         rtapi_print_msg(RTAPI_MSG_ERR,
             "soft_limits: ERROR: hal_init() failed (Return code %d)\n", comp_id);
@@ -136,89 +134,92 @@ int rtapi_app_main(void)
     if (data == 0) {
         rtapi_print_msg(RTAPI_MSG_ERR,
             "soft_limits: ERROR: hal_malloc() for common data failed\n");
-        cleanup();
+        cleanup(comp_id);
         return -1;
     }
     data->state=STATE_OK;
+    data->comp_id=comp_id;
 
-    joints = hal_malloc(num_joints * sizeof(soft_limits_joint_t));
-    if (joints == 0) {
+    data->joints = hal_malloc(num_joints * sizeof(soft_limits_joint_t));
+    if (data->joints == 0) {
         rtapi_print_msg(RTAPI_MSG_ERR,
             "soft_limits: ERROR: hal_malloc() for input pins failed\n");
-        cleanup();
+        cleanup(comp_id);
         return -1;
     }
 
     /* export pins/params for all joints */
     for (n = 0; n < num_joints; n++) {
-        retval=hal_param_float_newf(HAL_RW, &(joints[n].acc_max), comp_id, "soft_limits.%d.acc-max", n);
-        if (retval != 0) {cleanup(); return -1;}
-        retval=hal_param_float_newf(HAL_RW, &(joints[n].min_pos_limit), comp_id, "soft_limits.%d.min-pos-limit", n);
-        if (retval != 0) {cleanup(); return -1;}
-        retval=hal_param_float_newf(HAL_RW, &(joints[n].max_pos_limit), comp_id, "soft_limits.%d.max-pos-limit", n);
-        if (retval != 0) {cleanup(); return -1;}
+        soft_limits_joint_t *joint = &data->joints[n];
 
-        retval=hal_pin_bit_newf(HAL_IN, &(joints[n].homed), comp_id, "soft_limits.%d.homed", n);
-        if (retval != 0) {cleanup(); return -1;}
-        retval=hal_pin_float_newf(HAL_IN, &(joints[n].motor_offset), comp_id, "soft_limits.%d.motor-offset", n);
-        if (retval != 0) {cleanup(); return -1;}
-        retval=hal_pin_float_newf(HAL_IN, &(joints[n].backlash_filt), comp_id, "soft_limits.%d.backlash-filt", n);
-        if (retval != 0) {cleanup(); return -1;}
+        retval=hal_param_float_newf(HAL_RW, &(joint->acc_max), comp_id, "soft_limits.%d.acc-max", n);
+        if (retval != 0) {cleanup(comp_id); return -1;}
+        retval=hal_param_float_newf(HAL_RW, &(joint->min_pos_limit), comp_id, "soft_limits.%d.min-pos-limit", n);
+        if (retval != 0) {cleanup(comp_id); return -1;}
+        retval=hal_param_float_newf(HAL_RW, &(joint->max_pos_limit), comp_id, "soft_limits.%d.max-pos-limit", n);
+        if (retval != 0) {cleanup(comp_id); return -1;}
 
-        retval=hal_pin_float_newf(HAL_IN, &(joints[n].motor_pos_cmd_in), comp_id, "soft_limits.%d.motor-pos-cmd-in", n);
-        if (retval != 0) {cleanup(); return -1;}
-        retval=hal_pin_float_newf(HAL_IN, &(joints[n].pos_cmd_in), comp_id, "soft_limits.%d.pos-cmd-in", n);
-        if (retval != 0) {cleanup(); return -1;}
-        retval=hal_pin_float_newf(HAL_IN, &(joints[n].vel_cmd_in), comp_id, "soft_limits.%d.vel-cmd-in", n);
-        if (retval != 0) {cleanup(); return -1;}
-        retval=hal_pin_float_newf(HAL_IN, &(joints[n].acc_cmd_in), comp_id, "soft_limits.%d.acc-cmd-in", n);
-        if (retval != 0) {cleanup(); return -1;}
-        retval=hal_pin_float_newf(HAL_IN, &(joints[n].pos_fb_in), comp_id, "soft_limits.%d.pos-fb-in", n);
-        if (retval != 0) {cleanup(); return -1;}
-        retval=hal_pin_bit_newf(HAL_IN, &(joints[n].pos_lim_sw_in), comp_id, "soft_limits.%d.pos-lim-sw-in", n);
-        if (retval != 0) {cleanup(); return -1;}
-        retval=hal_pin_bit_newf(HAL_IN, &(joints[n].neg_lim_sw_in), comp_id, "soft_limits.%d.neg-lim-sw-in", n);
-        if (retval != 0) {cleanup(); return -1;}
+        retval=hal_pin_bit_newf(HAL_IN, &(joint->homed), comp_id, "soft_limits.%d.homed", n);
+        if (retval != 0) {cleanup(comp_id); return -1;}
+        retval=hal_pin_float_newf(HAL_IN, &(joint->motor_offset), comp_id, "soft_limits.%d.motor-offset", n);
+        if (retval != 0) {cleanup(comp_id); return -1;}
+        retval=hal_pin_float_newf(HAL_IN, &(joint->backlash_filt), comp_id, "soft_limits.%d.backlash-filt", n);
+        if (retval != 0) {cleanup(comp_id); return -1;}
 
-        retval=hal_pin_float_newf(HAL_OUT, &(joints[n].motor_pos_cmd_out), comp_id, "soft_limits.%d.motor-pos-cmd-out", n);
-        if (retval != 0) {cleanup(); return -1;}
-        retval=hal_pin_float_newf(HAL_OUT, &(joints[n].pos_cmd_out), comp_id, "soft_limits.%d.pos-cmd-out", n);
-        if (retval != 0) {cleanup(); return -1;}
-        retval=hal_pin_float_newf(HAL_OUT, &(joints[n].vel_cmd_out), comp_id, "soft_limits.%d.vel-cmd-out", n);
-        if (retval != 0) {cleanup(); return -1;}
-        retval=hal_pin_float_newf(HAL_OUT, &(joints[n].acc_cmd_out), comp_id, "soft_limits.%d.acc-cmd-out", n);
-        if (retval != 0) {cleanup(); return -1;}
-        retval=hal_pin_float_newf(HAL_OUT, &(joints[n].pos_fb_out), comp_id, "soft_limits.%d.pos-fb-out", n);
-        if (retval != 0) {cleanup(); return -1;}
-        retval=hal_pin_bit_newf(HAL_OUT, &(joints[n].pos_lim_sw_out), comp_id, "soft_limits.%d.pos-lim-sw-out", n);
-        if (retval != 0) {cleanup(); return -1;}
-        retval=hal_pin_bit_newf(HAL_OUT, &(joints[n].neg_lim_sw_out), comp_id, "soft_limits.%d.neg-lim-sw-out", n);
-        if (retval != 0) {cleanup(); return -1;}
+        retval=hal_pin_float_newf(HAL_IN, &(joint->motor_pos_cmd_in), comp_id, "soft_limits.%d.motor-pos-cmd-in", n);
+        if (retval != 0) {cleanup(comp_id); return -1;}
+        retval=hal_pin_float_newf(HAL_IN, &(joint->pos_cmd_in), comp_id, "soft_limits.%d.pos-cmd-in", n);
+        if (retval != 0) {cleanup(comp_id); return -1;}
+        retval=hal_pin_float_newf(HAL_IN, &(joint->vel_cmd_in), comp_id, "soft_limits.%d.vel-cmd-in", n);
+        if (retval != 0) {cleanup(comp_id); return -1;}
+        retval=hal_pin_float_newf(HAL_IN, &(joint->acc_cmd_in), comp_id, "soft_limits.%d.acc-cmd-in", n);
+        if (retval != 0) {cleanup(comp_id); return -1;}
+        retval=hal_pin_float_newf(HAL_IN, &(joint->pos_fb_in), comp_id, "soft_limits.%d.pos-fb-in", n);
+        if (retval != 0) {cleanup(comp_id); return -1;}
+        retval=hal_pin_bit_newf(HAL_IN, &(joint->pos_lim_sw_in), comp_id, "soft_limits.%d.pos-lim-sw-in", n);
+        if (retval != 0) {cleanup(comp_id); return -1;}
+        retval=hal_pin_bit_newf(HAL_IN, &(joint->neg_lim_sw_in), comp_id, "soft_limits.%d.neg-lim-sw-in", n);
+        if (retval != 0) {cleanup(comp_id); return -1;}
 
-        retval=hal_pin_bit_newf(HAL_OUT, &(joints[n].fault_out), comp_id, "soft_limits.%d.fault-out", n);
-        if (retval != 0) {cleanup(); return -1;}
+        retval=hal_pin_float_newf(HAL_OUT, &(joint->motor_pos_cmd_out), comp_id, "soft_limits.%d.motor-pos-cmd-out", n);
+        if (retval != 0) {cleanup(comp_id); return -1;}
+        retval=hal_pin_float_newf(HAL_OUT, &(joint->pos_cmd_out), comp_id, "soft_limits.%d.pos-cmd-out", n);
+        if (retval != 0) {cleanup(comp_id); return -1;}
+        retval=hal_pin_float_newf(HAL_OUT, &(joint->vel_cmd_out), comp_id, "soft_limits.%d.vel-cmd-out", n);
+        if (retval != 0) {cleanup(comp_id); return -1;}
+        retval=hal_pin_float_newf(HAL_OUT, &(joint->acc_cmd_out), comp_id, "soft_limits.%d.acc-cmd-out", n);
+        if (retval != 0) {cleanup(comp_id); return -1;}
+        retval=hal_pin_float_newf(HAL_OUT, &(joint->pos_fb_out), comp_id, "soft_limits.%d.pos-fb-out", n);
+        if (retval != 0) {cleanup(comp_id); return -1;}
+        retval=hal_pin_bit_newf(HAL_OUT, &(joint->pos_lim_sw_out), comp_id, "soft_limits.%d.pos-lim-sw-out", n);
+        if (retval != 0) {cleanup(comp_id); return -1;}
+        retval=hal_pin_bit_newf(HAL_OUT, &(joint->neg_lim_sw_out), comp_id, "soft_limits.%d.neg-lim-sw-out", n);
+        if (retval != 0) {cleanup(comp_id); return -1;}
 
-        retval=hal_pin_float_newf(HAL_OUT, &(joints[n].pos_lp), comp_id, "soft_limits.%d.pos-lp", n);
-        if (retval != 0) {cleanup(); return -1;}
-        retval=hal_pin_float_newf(HAL_OUT, &(joints[n].vel_est), comp_id, "soft_limits.%d.vel-est", n);
-        if (retval != 0) {cleanup(); return -1;}
+        retval=hal_pin_bit_newf(HAL_OUT, &(joint->fault_out), comp_id, "soft_limits.%d.fault-out", n);
+        if (retval != 0) {cleanup(comp_id); return -1;}
+
+        retval=hal_pin_float_newf(HAL_OUT, &(joint->pos_lp), comp_id, "soft_limits.%d.pos-lp", n);
+        if (retval != 0) {cleanup(comp_id); return -1;}
+        retval=hal_pin_float_newf(HAL_OUT, &(joint->vel_est), comp_id, "soft_limits.%d.vel-est", n);
+        if (retval != 0) {cleanup(comp_id); return -1;}
 
         //ToDo: Init more?
-        joints[n].state=STATE_JOINT_OK;
-        *joints[n].pos_lp=0;
-        *joints[n].vel_est=0;
+        joint->state=STATE_JOINT_OK;
+        *joint->pos_lp=0;
+        *joint->vel_est=0;
     }
 
     /* export "global" pins */
     retval=hal_pin_bit_newf(HAL_OUT, &(data->estop_out), comp_id, "soft_limits.estop-out");
-    if (retval != 0) {cleanup(); return -1;}
+    if (retval != 0) {cleanup(comp_id); return -1;}
     
     /* export functions */
-    retval = hal_export_funct("soft_limits.process", process, joints, 1, 0, comp_id);
+    retval = hal_export_funct("soft_limits.process", process, data, 1, 0, comp_id);
     if (retval != 0) {
         rtapi_print_msg(RTAPI_MSG_ERR,
             "soft_limits: ERROR: process funct export failed\n");
-        cleanup();
+        cleanup(comp_id);
         return -1;
     }
 
@@ -229,7 +230,7 @@ int rtapi_app_main(void)
 
 void rtapi_app_exit(void)
 {
-    cleanup();
+    cleanup(data->comp_id);
 }
 
 /***********************************************************************
@@ -250,33 +251,34 @@ static void process(void *arg, long period)
     }
 
     for (n = 0; n < num_joints; n++) {
+        soft_limits_joint_t *joint = &data->joints[n];
         //Ignore unhomed joints
-        if(!*joints[n].homed){
+        if(!*joint->homed){
             break;
         }
-        if ((data->state != STATE_FAULT && *joints[n].pos_cmd_in > joints[n].max_pos_limit + tol2 ) || 
-            *joints[n].pos_cmd_out > joints[n].max_pos_limit + tol2 ||
-            *joints[n].pos_fb_in > joints[n].max_pos_limit + tol2
+        if ((data->state != STATE_FAULT && *joint->pos_cmd_in > joint->max_pos_limit + tol2 ) || 
+            *joint->pos_cmd_out > joint->max_pos_limit + tol2 ||
+            *joint->pos_fb_in > joint->max_pos_limit + tol2
         ) {
-            if ( joints[n].state != STATE_JOINT_FAULT ) {
+            if ( joint->state != STATE_JOINT_FAULT ) {
                 rtapi_print_msg(RTAPI_MSG_ERR, "soft_limits: ERROR: limits are exceided (max_pos_limit)! pos in %f pos out %f pos fb %f limit %f joint %d\n", 
-                    *joints[n].pos_cmd_in, *joints[n].pos_cmd_out, *joints[n].pos_fb_in, joints[n].max_pos_limit, n);
+                    *joint->pos_cmd_in, *joint->pos_cmd_out, *joint->pos_fb_in, joint->max_pos_limit, n);
             }
-            joints[n].state=STATE_JOINT_FAULT;
-            *joints[n].fault_out=1;
-            *joints[n].pos_lim_sw_out=1;
+            joint->state=STATE_JOINT_FAULT;
+            *joint->fault_out=1;
+            *joint->pos_lim_sw_out=1;
             data->state=STATE_FAULT;
         }
-        if ((data->state != STATE_FAULT && *joints[n].pos_cmd_in < joints[n].min_pos_limit - tol2 ) || 
-            *joints[n].pos_cmd_out < joints[n].min_pos_limit - tol2 ||
-            *joints[n].pos_fb_in < joints[n].min_pos_limit - tol2
+        if ((data->state != STATE_FAULT && *joint->pos_cmd_in < joint->min_pos_limit - tol2 ) || 
+            *joint->pos_cmd_out < joint->min_pos_limit - tol2 ||
+            *joint->pos_fb_in < joint->min_pos_limit - tol2
         ) {
-            if ( joints[n].state != STATE_JOINT_FAULT ) {
+            if ( joint->state != STATE_JOINT_FAULT ) {
                 rtapi_print_msg(RTAPI_MSG_ERR, "soft_limits: ERROR: limits are exceided (min_pos_limit)! pos in %f pos out %f pos fb %f limit %f joint %d\n", 
-                    *joints[n].pos_cmd_in, *joints[n].pos_cmd_out, *joints[n].pos_fb_in, joints[n].min_pos_limit, n);
+                    *joint->pos_cmd_in, *joint->pos_cmd_out, *joint->pos_fb_in, joint->min_pos_limit, n);
             }
-            joints[n].state=STATE_JOINT_FAULT;
-            *joints[n].neg_lim_sw_out=1;
+            joint->state=STATE_JOINT_FAULT;
+            *joint->neg_lim_sw_out=1;
             data->state=STATE_FAULT;
         }
     }
@@ -284,97 +286,101 @@ static void process(void *arg, long period)
     if(data->state == STATE_OK){
         //Pass trough all
         for (n = 0; n < num_joints; n++) {
-            *joints[n].motor_pos_cmd_out = *joints[n].motor_pos_cmd_in;
-            *joints[n].pos_cmd_out = *joints[n].pos_cmd_in;
-            *joints[n].vel_cmd_out = *joints[n].vel_cmd_in;
-            *joints[n].acc_cmd_out = *joints[n].acc_cmd_out;
-            *joints[n].pos_fb_out = *joints[n].pos_fb_in;
-            *joints[n].pos_lim_sw_out = *joints[n].pos_lim_sw_in;
-            *joints[n].neg_lim_sw_out = *joints[n].neg_lim_sw_in;
+            soft_limits_joint_t *joint = &data->joints[n];
+            *joint->motor_pos_cmd_out = *joint->motor_pos_cmd_in;
+            *joint->pos_cmd_out = *joint->pos_cmd_in;
+            *joint->vel_cmd_out = *joint->vel_cmd_in;
+            *joint->acc_cmd_out = *joint->acc_cmd_out;
+            *joint->pos_fb_out = *joint->pos_fb_in;
+            *joint->pos_lim_sw_out = *joint->pos_lim_sw_in;
+            *joint->neg_lim_sw_out = *joint->neg_lim_sw_in;
         }
 
         for (n = 0; n < num_joints; n++) {
+            soft_limits_joint_t *joint = &data->joints[n];
             //Ignore unhomed joints
-            if(!*joints[n].homed){
+            if(!*joint->homed){
                 continue;
             }
 
             //Estimate velocity based of position to verify linuxcnc is not lying
             double k_lp=0.005/dt; //tau/dt
-            double pos_lp_new = (*joints[n].pos_lp*k_lp + *joints[n].pos_cmd_in)/(1.0+k_lp);
-            *joints[n].vel_est = (pos_lp_new - *joints[n].pos_lp)/dt;
-            *joints[n].pos_lp = pos_lp_new;
+            double pos_lp_new = (*joint->pos_lp*k_lp + *joint->pos_cmd_in)/(1.0+k_lp);
+            *joint->vel_est = (pos_lp_new - *joint->pos_lp)/dt;
+            *joint->pos_lp = pos_lp_new;
             //ToDo: And now, what to do with it?
 
             //Check if motor and joint commands are in sync
             //Code in control.c:
             // joint->motor_pos_cmd = joint->pos_cmd + joint->backlash_filt + joint->motor_offset;
             //-> joint->motor_pos_cmd - joint->pos_cmd - joint->backlash_filt - joint->motor_offset = 0
-            double pos_error = *joints[n].motor_pos_cmd_in - *joints[n].pos_cmd_in - *joints[n].backlash_filt - *joints[n].motor_offset;
+            double pos_error = *joint->motor_pos_cmd_in - *joint->pos_cmd_in - *joint->backlash_filt - *joint->motor_offset;
             if(fabs(pos_error) > 1e-6){
-                if ( joints[n].state != STATE_JOINT_BREAKING ) {
+                if ( joint->state != STATE_JOINT_BREAKING ) {
                     rtapi_print_msg(RTAPI_MSG_ERR, "soft_limits: ERROR: motor pos inconsistent! pos_error = %f pos in %f motor in %f motor offset %f joint %d\n", 
-                        pos_error, *joints[n].pos_cmd_in, *joints[n].motor_pos_cmd_in, *joints[n].motor_offset, n);
+                        pos_error, *joint->pos_cmd_in, *joint->motor_pos_cmd_in, *joint->motor_offset, n);
                 }
-                joints[n].state=STATE_JOINT_BREAKING;
-                *joints[n].fault_out=1;
+                joint->state=STATE_JOINT_BREAKING;
+                *joint->fault_out=1;
                 data->state=STATE_BREAKING;
             }
 
-            double v = *joints[n].vel_cmd_in;
-            double stop_dist = v * v / ( 2 * joints[n].acc_max );
+            double v = *joint->vel_cmd_in;
+            double stop_dist = v * v / ( 2 * joint->acc_max );
 
             //Only pos_cmd_in / pos_fb_in needs to be checked due to ^^
-            double max_pos_vel = joints[n].max_pos_limit - stop_dist + tol1;
-            if (v > 0 && (*joints[n].pos_cmd_in > max_pos_vel || *joints[n].pos_fb_in > max_pos_vel)) {
-                if ( joints[n].state != STATE_JOINT_BREAKING ) {
+            double max_pos_vel = joint->max_pos_limit - stop_dist + tol1;
+            if (v > 0 && (*joint->pos_cmd_in > max_pos_vel || *joint->pos_fb_in > max_pos_vel)) {
+                if ( joint->state != STATE_JOINT_BREAKING ) {
                     rtapi_print_msg(RTAPI_MSG_ERR, "soft_limits: ERROR: limits will be exceided (max_pos_limit)! stop dist = %f pos in %f pos fb %f vel %f limit %f joint %d\n", 
-                        stop_dist, *joints[n].pos_cmd_in, *joints[n].pos_fb_in, *joints[n].vel_cmd_in, joints[n].max_pos_limit, n);
+                        stop_dist, *joint->pos_cmd_in, *joint->pos_fb_in, *joint->vel_cmd_in, joint->max_pos_limit, n);
                 }
-                joints[n].state=STATE_JOINT_BREAKING;
-                *joints[n].fault_out=1;
+                joint->state=STATE_JOINT_BREAKING;
+                *joint->fault_out=1;
                 data->state=STATE_BREAKING;
             }
-            double min_pos_vel = joints[n].min_pos_limit + stop_dist - tol1;
-            if (v < 0 && (*joints[n].pos_cmd_in < min_pos_vel || *joints[n].pos_fb_in < min_pos_vel)) {
-                if ( joints[n].state != STATE_JOINT_BREAKING ) {
+            double min_pos_vel = joint->min_pos_limit + stop_dist - tol1;
+            if (v < 0 && (*joint->pos_cmd_in < min_pos_vel || *joint->pos_fb_in < min_pos_vel)) {
+                if ( joint->state != STATE_JOINT_BREAKING ) {
                     rtapi_print_msg(RTAPI_MSG_ERR, "soft_limits: ERROR: limits will be exceided (min_pos_limit)! stop dist = %f pos in %f pos fb %f vel %f limit %f joint %d\n", 
-                        stop_dist, *joints[n].pos_cmd_in, *joints[n].pos_fb_in, *joints[n].vel_cmd_in, joints[n].min_pos_limit, n);
+                        stop_dist, *joint->pos_cmd_in, *joint->pos_fb_in, *joint->vel_cmd_in, joint->min_pos_limit, n);
                 }
-                joints[n].state=STATE_JOINT_BREAKING;
-                *joints[n].fault_out=1;
+                joint->state=STATE_JOINT_BREAKING;
+                *joint->fault_out=1;
                 data->state=STATE_BREAKING;
             }
         }
     }else if(data->state == STATE_BREAKING){
         //Pass trough only limit switches
         for (n = 0; n < num_joints; n++) {
-            *joints[n].pos_lim_sw_out = *joints[n].pos_lim_sw_in;
-            *joints[n].neg_lim_sw_out = *joints[n].neg_lim_sw_in;
+            soft_limits_joint_t *joint = &data->joints[n];
+            *joint->pos_lim_sw_out = *joint->pos_lim_sw_in;
+            *joint->neg_lim_sw_out = *joint->neg_lim_sw_in;
         }
 
         bool done = true;
         for (n = 0; n < num_joints; n++) {
-            if(joints[n].state==0){
+            soft_limits_joint_t *joint = &data->joints[n];
+            if(joint->state==0){
                 continue;
             }
-            double acc_cmd_out_old = *joints[n].acc_cmd_out;
-            if(*joints[n].vel_cmd_out > 0){
-                    *joints[n].acc_cmd_out = - joints[n].acc_max;
+            double acc_cmd_out_old = *joint->acc_cmd_out;
+            if(*joint->vel_cmd_out > 0){
+                    *joint->acc_cmd_out = - joint->acc_max;
             }else{
-                    *joints[n].acc_cmd_out = + joints[n].acc_max;
+                    *joint->acc_cmd_out = + joint->acc_max;
             }
-            *joints[n].vel_cmd_out += *joints[n].acc_cmd_out * dt;
+            *joint->vel_cmd_out += *joint->acc_cmd_out * dt;
             //Check for sign change: If old and nev acc have different sign, we are done
-            if( acc_cmd_out_old * *joints[n].acc_cmd_out < 0){
-                joints[n].state=STATE_JOINT_OK;
-                *joints[n].acc_cmd_out = 0;
-                *joints[n].vel_cmd_out = 0;
+            if( acc_cmd_out_old * *joint->acc_cmd_out < 0){
+                joint->state=STATE_JOINT_OK;
+                *joint->acc_cmd_out = 0;
+                *joint->vel_cmd_out = 0;
             }else{
                 done = false;
             }
-            *joints[n].motor_pos_cmd_out += *joints[n].vel_cmd_out * dt;
-            *joints[n].pos_cmd_out += *joints[n].vel_cmd_out * dt;
+            *joint->motor_pos_cmd_out += *joint->vel_cmd_out * dt;
+            *joint->pos_cmd_out += *joint->vel_cmd_out * dt;
         }
         if(done){
             rtapi_print_msg(RTAPI_MSG_ERR, "soft_limits: stop finalized\n");
@@ -383,20 +389,23 @@ static void process(void *arg, long period)
     }else if(data->state == STATE_STOPPED){
         //Pass trough only limit switches
         for (n = 0; n < num_joints; n++) {
-            *joints[n].pos_lim_sw_out = *joints[n].pos_lim_sw_in;
-            *joints[n].neg_lim_sw_out = *joints[n].neg_lim_sw_in;
+            soft_limits_joint_t *joint = &data->joints[n];
+            *joint->pos_lim_sw_out = *joint->pos_lim_sw_in;
+            *joint->neg_lim_sw_out = *joint->neg_lim_sw_in;
         }
 
         //Wait for being unhomed to reset
         bool homed=false;
         for (n = 0; n < num_joints; n++) {
-            if(*joints[n].homed){
+            soft_limits_joint_t *joint = &data->joints[n];
+            if(*joint->homed){
                 homed=true;
             }
         }
         if(!homed){
             for (n = 0; n < num_joints; n++) {
-                *joints[n].fault_out=0;
+                soft_limits_joint_t *joint = &data->joints[n];
+                *joint->fault_out=0;
             }
             data->state = STATE_OK;
             rtapi_print_msg(RTAPI_MSG_ERR, "soft_limits: reset fault\n");
@@ -404,11 +413,12 @@ static void process(void *arg, long period)
     }else if(data->state == STATE_FAULT){
         //Pass trough only limit switch rising edge
         for (n = 0; n < num_joints; n++) {
-            if(*joints[n].pos_lim_sw_in){
-                *joints[n].pos_lim_sw_out = *joints[n].pos_lim_sw_in;
+            soft_limits_joint_t *joint = &data->joints[n];
+            if(*joint->pos_lim_sw_in){
+                *joint->pos_lim_sw_out = *joint->pos_lim_sw_in;
             }
-            if(*joints[n].neg_lim_sw_in){
-                *joints[n].neg_lim_sw_out = *joints[n].neg_lim_sw_in;
+            if(*joint->neg_lim_sw_in){
+                *joint->neg_lim_sw_out = *joint->neg_lim_sw_in;
             }
         }
 
