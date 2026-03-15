@@ -34,7 +34,7 @@
 #include "config.h"
 #include "homing.h"
 #include "axis.h"
-#include "stdio.h"
+
 // Mark strings for translation, but defer translation to userspace
 #define _(s) (s)
 
@@ -222,6 +222,7 @@ void emcmotController(void *arg, long period)
         do_once = 0;
     }
 
+    rtapi_set_msg_level(RTAPI_MSG_ALL);
     static long long int last = 0;
 
     long long int now = rtapi_get_clocks();
@@ -1547,7 +1548,7 @@ static void get_pos_cmds(long period)
                     cubicDrain(&(joint->cubic));
                 }
                 tpSetPos(&emcmotInternal->coord_tp, &emcmotStatus->carte_pos_cmd);
-                printf("Stop done [%f %f %f]\n", emcmotStatus->carte_pos_cmd.tran.x, emcmotStatus->carte_pos_cmd.tran.y, emcmotStatus->carte_pos_cmd.tran.z);
+                rtapi_print_msg(RTAPI_MSG_WARN, "Stop done [%f %f %f]\n", emcmotStatus->carte_pos_cmd.tran.x, emcmotStatus->carte_pos_cmd.tran.y, emcmotStatus->carte_pos_cmd.tran.z);
             }
         }
         break;
@@ -1596,12 +1597,12 @@ static void get_pos_cmds(long period)
 	/* check for no way to stop before soft limits */
 	if (v > 0 && joint->pos_cmd > joint->max_pos_limit - stop_dist + 0.000000000001) {
 	    joint_limit[joint_num][1] = 1;
-            if ( ! emcmotStatus->on_soft_limit ) printf("Max: StopDist = %f pos %f vel %f limit %f acc %f joint %d\n", stop_dist, joint->pos_cmd, joint->vel_cmd, joint->max_pos_limit, joint->acc_limit, joint_num);
+            if ( ! emcmotStatus->on_soft_limit ) rtapi_print_msg(RTAPI_MSG_DBG, "Max: StopDist = %f pos %f vel %f limit %f acc %f joint %d\n", stop_dist, joint->pos_cmd, joint->vel_cmd, joint->max_pos_limit, joint->acc_limit, joint_num);
             projectedlimit = 1;
         }
         else if (v < 0 && joint->pos_cmd < joint->min_pos_limit + stop_dist - 0.000000000001) {
 	    joint_limit[joint_num][0] = 1;
-            if ( ! emcmotStatus->on_soft_limit ) printf("Min: StopDist = %f pos %f vel %f limit %f acc %f joint %d\n", stop_dist, joint->pos_cmd, joint->vel_cmd, joint->min_pos_limit, joint->acc_limit, joint_num);
+            if ( ! emcmotStatus->on_soft_limit ) rtapi_print_msg(RTAPI_MSG_DBG, "Min: StopDist = %f pos %f vel %f limit %f acc %f joint %d\n", stop_dist, joint->pos_cmd, joint->vel_cmd, joint->min_pos_limit, joint->acc_limit, joint_num);
             projectedlimit = 1;
         }
     }
@@ -1635,7 +1636,7 @@ static void get_pos_cmds(long period)
                             reportError(_("Hint: switch to joint mode to jog off soft limit"));
                         }
                     }else{
-                        reportError(_("Going to hit NEGATIVE soft limit (%.5f) on joint %d, stopped move\n"),
+                        reportError(_("Going to hit NEGATIVE soft limit (%.5f) on joint %d, stopped move"),
                                         joint->min_pos_limit, joint_num);
                     }
                 } else if (joint_limit[joint_num][1] == 1) {
@@ -1649,7 +1650,7 @@ static void get_pos_cmds(long period)
                             reportError(_("Hint: switch to joint mode to jog off soft limit"));
                         }
                     }else{
-                        reportError(_("Going to hit POSITIVE soft limit (%.5f) on joint %d, stopped move\n"),
+                        reportError(_("Going to hit POSITIVE soft limit (%.5f) on joint %d, stopped move"),
                                         joint->max_pos_limit, joint_num);
                     }
                 }

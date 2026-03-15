@@ -69,7 +69,6 @@
 #include "motion_struct.h"
 #include "homing.h"
 #include "axis.h"
-#include <stdio.h>
 
 
 #define ABS(x) (((x) < 0) ? -(x) : (x))
@@ -494,7 +493,7 @@ void emcmotCommandHandler_locked(void *arg, long servo_period)
             }
         }
 	
-	//printf("Command: %i\n", emcmotCommand->command);
+	//rtapi_print_msg(RTAPI_MSG_DBG, "Command: %i\n", emcmotCommand->command);
 	struct emcmot_command_t *c=emcmotCommand; 
 	switch (emcmotCommand->command) {
 	case EMCMOT_ABORT:
@@ -507,7 +506,6 @@ void emcmotCommandHandler_locked(void *arg, long servo_period)
 	       does yet), and if in free mode, it disables the free mode traj
 	       planners which stops joint motion */
 	    rtapi_print_msg(RTAPI_MSG_DBG, "ABORT");
-	    rtapi_print_msg(RTAPI_MSG_DBG, " %d", joint_num);
 	    /* check for coord or free space motion active */
 	    if (GET_MOTION_TELEOP_FLAG()) {
                 axis_jog_abort_all(0);
@@ -540,7 +538,7 @@ void emcmotCommandHandler_locked(void *arg, long servo_period)
 	case EMCMOT_JOG_ABORT:
 	    /* abort one joint number or axis number */
 	    /* can happen at any time */
-	    //printf("EMCMOT_JOG_ABORT: %i\n", joint_num);
+	    rtapi_print_msg(RTAPI_MSG_DBG, "EMCMOT_JOG_ABORT: %i", joint_num);
 	    if (GET_MOTION_TELEOP_FLAG()) {
 	        /* tell teleop planner to stop */
 	        if ((emcmotCommand->axis >= 0) && (emcmotCommand->axis < EMCMOT_MAX_AXIS)) {
@@ -1001,18 +999,18 @@ void emcmotCommandHandler_locked(void *arg, long servo_period)
 		break;
 
 	case EMCMOT_SET_LINE:
-		printf(
-                    "SET_LINE x=%.6g, y=%.6g, z=%.6g, a=%.6g, b=%.6g, c=%.6g, u=%.6g, v=%.6g, w=%.6g, id=%d, motion_type=%d, vel=%.6g, ini_maxvel=%.6g, acc=%.6g, turn=%d\n",
+	    /* emcmotInternal->coord_tp up a linear move */
+	    /* requires motion enabled, coordinated mode, not on limits */
+	    rtapi_print_msg(RTAPI_MSG_DBG, "SET_LINE");
+	    rtapi_print_msg(RTAPI_MSG_DBG,
+                    "\n    x=%.6g, y=%.6g, z=%.6g, a=%.6g, b=%.6g, c=%.6g, u=%.6g, v=%.6g, w=%.6g, id=%d, motion_type=%d, vel=%.6g, ini_maxvel=%.6g, acc=%.6g, turn=%d",
                     c->pos.tran.x, c->pos.tran.y, c->pos.tran.z,
                     c->pos.a, c->pos.b, c->pos.c,
                     c->pos.u, c->pos.v, c->pos.w,
                     c->id, c->motion_type,
                     c->vel, c->ini_maxvel,
                     c->acc, c->turn
-                );
-	    /* emcmotInternal->coord_tp up a linear move */
-	    /* requires motion enabled, coordinated mode, not on limits */
-	    rtapi_print_msg(RTAPI_MSG_DBG, "SET_LINE");
+	    );
 	    if (!GET_MOTION_COORD_FLAG() || !GET_MOTION_ENABLE_FLAG()) {
 		reportError(_("need to be enabled, in coord mode for linear move"));
 		emcmotStatus->commandStatus = EMCMOT_COMMAND_INVALID_COMMAND;
@@ -1079,23 +1077,22 @@ void emcmotCommandHandler_locked(void *arg, long servo_period)
 	    break;
 
 	case EMCMOT_SET_CIRCLE:
-		printf("SET_CIRCLE:\n");
-		printf(
-			"    pos: x=%.6g, y=%.6g, z=%.6g, a=%.6g, b=%.6g, c=%.6g, u=%.6g, v=%.6g, w=%.6g\n",
-			c->pos.tran.x, c->pos.tran.y, c->pos.tran.z,
-			c->pos.a, c->pos.b, c->pos.c,
-			c->pos.u, c->pos.v, c->pos.w
-		);
-		printf("    center: x=%.6g, y=%.6g, z=%.6g\n", c->center.x, c->center.y, c->center.z);
-		printf("    normal: x=%.6g, y=%.6g, z=%.6g\n", c->normal.x, c->normal.y, c->normal.z);
-		printf("    id=%d, motion_type=%d, vel=%.6g, ini_maxvel=%.6g, acc=%.6g, turn=%d\n",
-			c->id, c->motion_type,
-			c->vel, c->ini_maxvel,
-			c->acc, c->turn
-		);
 	    /* emcmotInternal->coord_tp up a circular move */
 	    /* requires coordinated mode, enable on, not on limits */
 	    rtapi_print_msg(RTAPI_MSG_DBG, "SET_CIRCLE");
+	    rtapi_print_msg(RTAPI_MSG_DBG, 
+		"\n    pos: x=%.6g, y=%.6g, z=%.6g, a=%.6g, b=%.6g, c=%.6g, u=%.6g, v=%.6g, w=%.6g\n",
+		c->pos.tran.x, c->pos.tran.y, c->pos.tran.z,
+		c->pos.a, c->pos.b, c->pos.c,
+		c->pos.u, c->pos.v, c->pos.w
+	    );
+	    rtapi_print_msg(RTAPI_MSG_DBG, "    center: x=%.6g, y=%.6g, z=%.6g\n", c->center.x, c->center.y, c->center.z);
+	    rtapi_print_msg(RTAPI_MSG_DBG, "    normal: x=%.6g, y=%.6g, z=%.6g\n", c->normal.x, c->normal.y, c->normal.z);
+	    rtapi_print_msg(RTAPI_MSG_DBG, "    id=%d, motion_type=%d, vel=%.6g, ini_maxvel=%.6g, acc=%.6g, turn=%d",
+		c->id, c->motion_type,
+		c->vel, c->ini_maxvel,
+		c->acc, c->turn
+	    );
 	    if (!GET_MOTION_COORD_FLAG() || !GET_MOTION_ENABLE_FLAG()) {
 		reportError(_("need to be enabled, in coord mode for circular move"));
 		emcmotStatus->commandStatus = EMCMOT_COMMAND_INVALID_COMMAND;
@@ -1618,7 +1615,7 @@ void emcmotCommandHandler_locked(void *arg, long servo_period)
 
     case EMCMOT_SET_SPINDLE_PARAMS:
 	    rtapi_print_msg(RTAPI_MSG_DBG, "SPINDLE_SETUP: spindle %d/%d max_pos %f min_pos %f"
-                "max_neg %f min_neg %f, home: %f, %f, %d\n",
+                "max_neg %f min_neg %f, home: %f, %f, %d",
                         emcmotCommand->spindle, emcmotConfig->numSpindles, emcmotCommand->maxLimit,
                         emcmotCommand->min_pos_speed, emcmotCommand->max_neg_speed, emcmotCommand->minLimit,
                         emcmotCommand->search_vel, emcmotCommand->home, emcmotCommand->home_sequence);
@@ -1899,6 +1896,7 @@ void emcmotCommandHandler_locked(void *arg, long servo_period)
 	    break;
 
         case EMCMOT_SET_OFFSET:
+	    rtapi_print_msg(RTAPI_MSG_DBG, "EMCMOT_SET_OFFSET");
             emcmotStatus->tool_offset = emcmotCommand->tool_offset;
             break;
 
@@ -1969,9 +1967,11 @@ void emcmotCommandHandler_locked(void *arg, long servo_period)
 	    emcmotStatus->commandStatus = EMCMOT_COMMAND_UNKNOWN_COMMAND;
 	    break;
         case EMCMOT_SET_MAX_FEED_OVERRIDE:
+            rtapi_print_msg(RTAPI_MSG_DBG, "EMCMOT_SET_MAX_FEED_OVERRIDE");
             emcmotConfig->maxFeedScale = emcmotCommand->maxFeedScale;
             break;
         case EMCMOT_SETUP_ARC_BLENDS:
+            rtapi_print_msg(RTAPI_MSG_DBG, "EMCMOT_SETUP_ARC_BLENDS");
             emcmotConfig->arcBlendEnable = emcmotCommand->arcBlendEnable;
             emcmotConfig->arcBlendFallbackEnable = emcmotCommand->arcBlendFallbackEnable;
             emcmotConfig->arcBlendOptDepth = emcmotCommand->arcBlendOptDepth;
@@ -1980,6 +1980,7 @@ void emcmotCommandHandler_locked(void *arg, long servo_period)
             emcmotConfig->arcBlendTangentKinkRatio = emcmotCommand->arcBlendTangentKinkRatio;
             break;
         case EMCMOT_SET_PROBE_ERR_INHIBIT:
+            rtapi_print_msg(RTAPI_MSG_DBG, "EMCMOT_SET_PROBE_ERR_INHIBIT");
             emcmotConfig->inhibit_probe_jog_error = emcmotCommand->probe_jog_err_inhibit;
             emcmotConfig->inhibit_probe_home_error = emcmotCommand->probe_home_err_inhibit;
             break;
