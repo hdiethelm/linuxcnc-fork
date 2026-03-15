@@ -1532,6 +1532,7 @@ static void get_pos_cmds(long period)
             kinematicsForward(positions, &emcmotStatus->carte_pos_cmd, &fflags, &iflags);
             if(done){
                 SET_MOTION_HARDSTOP_FLAG(0);
+                SET_MOTION_ERROR_FLAG(1);
                 //Just run the tp to completion to stop, only doing tpAbort(&emcmotInternal->coord_tp) doesn't work
                 //I guess there are some components of the tp which are not properly reset
                 //This code is probably crap and should be improved
@@ -1653,7 +1654,8 @@ static void get_pos_cmds(long period)
                     }
                 }
 	    }
-	    SET_MOTION_ERROR_FLAG(1);
+            //The motion error flag is set after the stop,
+            //so the UI is updated during the stop
 	    SET_MOTION_HARDSTOP_FLAG(1);
 	    emcmotStatus->on_soft_limit = 1;
 	}
