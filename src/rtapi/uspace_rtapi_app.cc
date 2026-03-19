@@ -172,18 +172,6 @@ static int do_newinst_cmd(const string& type, const string& name, const string& 
     return comp->make((char*)name.c_str(), (char*)arg.c_str());
 }
 
-static int do_debug_cmd(const string& value) {
-    int new_level = atoi(value.c_str());
-    if (new_level < 0 || new_level > 5){
-        rtapi_print_msg(RTAPI_MSG_ERR, "Debug level must be >=0 and <= 5\n");
-        return -EINVAL;
-    }
-    printf("PID = %i\n", getpid());
-    printf("Set debug to: %i\n", new_level);
-    return rtapi_set_msg_level(new_level);
-}
-
-
 static int do_one_item(char item_type_char, const string &param_name, const string &param_value, void *vitem, int idx=0) {
     char *endp;
     switch(item_type_char) {
@@ -339,6 +327,23 @@ static int do_unload_cmd(const string& name) {
         instance_count --;
     }
     return 0;
+}
+
+static int do_debug_cmd(const string& value) {
+    try{
+        int new_level = stoi(value);
+        if (new_level < 0 || new_level > 5){
+            rtapi_print_msg(RTAPI_MSG_ERR, "Debug level must be >=0 and <= 5\n");
+            return -EINVAL;
+        }
+        printf("PID = %i\n", getpid());
+        printf("Set debug to: %i\n", new_level);
+        return rtapi_set_msg_level(new_level);
+    }catch(invalid_argument &e){
+        //stoi will throw an exception if parsing is not possible
+        rtapi_print_msg(RTAPI_MSG_ERR, "Debug level is not a number\n");
+        return -EINVAL;
+    }
 }
 
 struct ReadError : std::exception {};
