@@ -172,6 +172,18 @@ static int do_newinst_cmd(const string& type, const string& name, const string& 
     return comp->make((char*)name.c_str(), (char*)arg.c_str());
 }
 
+static int do_debug_cmd(const string& value) {
+    int new_level = atoi(value.c_str());
+    if (new_level < 0 || new_level > 5){
+        rtapi_print_msg(RTAPI_MSG_ERR, "Debug level must be >=0 and <= 5\n");
+        return -EINVAL;
+    }
+    printf("PID = %i\n", getpid());
+    printf("Set debug to: %i\n", new_level);
+    return rtapi_set_msg_level(new_level);
+}
+
+
 static int do_one_item(char item_type_char, const string &param_name, const string &param_value, void *vitem, int idx=0) {
     char *endp;
     switch(item_type_char) {
@@ -403,6 +415,8 @@ static int handle_command(vector<string> args) {
         return do_newinst_cmd(args[1], args[2], "");
     } else if(args.size() == 4 && args[0] == "newinst") {
         return do_newinst_cmd(args[1], args[2], args[3]);
+    } else if(args.size() == 2 && args[0] == "debug") {
+        return do_debug_cmd(args[1]);
     } else {
         rtapi_print_msg(RTAPI_MSG_ERR,
                 "Unrecognized command starting with %s\n",
@@ -545,8 +559,10 @@ int main(int argc, char **argv) {
 #ifdef __linux__
     setfsuid(ruid);
 #endif
+    printf("RTAPI Main");
     vector<string> args;
-    for(int i=1; i<argc; i++) { args.push_back(string(argv[i])); }
+    for(int i=1; i<argc; i++) { args.push_back(string(argv[i]));     printf(" %s", argv[i]);}
+    printf("\n");
 
 become_master:
     int len=0;

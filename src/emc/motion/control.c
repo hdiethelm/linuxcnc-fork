@@ -205,6 +205,7 @@ static void handle_kinematicsSwitch(void);
   Inactive axes are still calculated, but the PIDs are inhibited and
   the amp enable/disable are inhibited
   */
+ #include <unistd.h>
 void emcmotController(void *arg, long period)
 {
     (void)arg;
@@ -230,7 +231,13 @@ void emcmotController(void *arg, long period)
 #ifdef HAVE_CPU_KHZ
     *(emcmot_hal_data->last_period_ns) = this_run * 1e6 / cpu_khz;
 #endif
-
+    static bool i=false;
+    if(!i){
+        rtapi_print("PID = %i\n", getpid());
+        rtapi_set_msg_level(RTAPI_MSG_ALL);
+        i=true;
+    }
+    
     // we need this for next time
     last = now;
 

@@ -246,6 +246,8 @@ int do_set_debug_cmd(char* level){
         halcmd_error("Debug level must be >=0 and <= 5\n");
         return -EINVAL;
     }
+    printf("PID = %i\n", getpid());
+    printf("Set debug to: %i\n", atoi(level));
     return rtapi_set_msg_level(atoi(level));
 }
 
