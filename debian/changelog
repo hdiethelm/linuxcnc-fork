@@ -1,3 +1,10 @@
+linuxcnc (1:2.9.8-5) UNRELEASED; urgency=medium
+
+  * Non-maintainer upload.
+  * Xenomai4
+
+ -- Hannes Diethelm <hannes@trixie-box>  Thu, 02 Apr 2026 18:55:02 +0200
+
 linuxcnc (1:2.9.8-4) UNRELEASED; urgency=medium
 
   * Non-maintainer upload.
