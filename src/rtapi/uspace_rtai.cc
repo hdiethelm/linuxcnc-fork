@@ -116,6 +116,7 @@ struct RtaiApp : RtapiApp {
     }
 
     int task_pll_set_correction(long value) {
+        (void)value;
         // PLL functions not supported
         return -EINVAL;
     }
@@ -133,12 +134,18 @@ struct RtaiApp : RtapiApp {
     unsigned char do_inb(unsigned int port) {
 #ifdef HAVE_SYS_IO_H
         return inb(port);
+#else
+        (void)port;
+        return 0;
 #endif
     }
 
     void do_outb(unsigned char val, unsigned int port) {
 #ifdef HAVE_SYS_IO_H
         return outb(val, port);
+#else
+        (void)port;
+        return 0;
 #endif
     }
 
