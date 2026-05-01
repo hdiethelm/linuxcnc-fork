@@ -190,17 +190,13 @@ jobs:
         # "fetch-depth: 0" fetches all of history, this is needed by
         # our build system to determine the version from tags
         fetch-depth: 0
-    - name: Add linuxcnc.org deb archive
-      run: |
-        .github/scripts/add-linuxcnc-repository.sh ${{ matrix.debian_version }}
-        apt-get --quiet update
     - name: Build architecture-specific Debian packages
       env:
         DEBEMAIL: emc-developers@lists.sourceforge.net
         DEBFULLNAME: LinuxCNC Github CI Robot
       run: |
         set -x
-        git config --global --add safe.directory .
+        git config --global --add safe.directory ${PWD}
         debian/configure
         debian/update-dch-from-git
         scripts/get-version-from-git | sed -re 's/^v(.*)$/\1/' >| VERSION; cat VERSION
@@ -268,17 +264,13 @@ jobs:
         # "fetch-depth: 0" fetches all of history, this is needed by
         # our build system to determine the version from tags
         fetch-depth: 0
-    - name: Add linuxcnc.org deb archive
-      run: |
-        .github/scripts/add-linuxcnc-repository.sh ${{ matrix.debian_version }}
-        apt-get --quiet update
     - name: Build architecture-independent Debian packages
       env:
         DEBEMAIL: emc-developers@lists.sourceforge.net
         DEBFULLNAME: LinuxCNC Github CI Robot
       run: |
         set -x
-        git config --global --add safe.directory .
+        git config --global --add safe.directory ${PWD}
         debian/configure
         debian/update-dch-from-git
         scripts/get-version-from-git | sed -re 's/^v(.*)$/\1/' >| VERSION; cat VERSION
