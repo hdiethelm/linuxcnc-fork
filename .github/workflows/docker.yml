@@ -53,3 +53,15 @@ jobs:
         push: true
         outputs: type=image,name=target,annotation-index.org.opencontainers.image.description=LinuxCNC build image
         tags: ghcr.io/${{ github.repository_owner }}/linuxcnc/build-container:${{ matrix.debian_version }}-${{ matrix.runner_arch }}-latest
+
+#Fails due to unknown reason
+#  cleanup-docker:
+#    runs-on: ubuntu-24.04
+#    steps:
+#    - name: Cleanup untagged images
+#      uses: actions/delete-package-versions@v5
+#      with:
+#        package-name: 'build-container'
+#        package-type: 'container'
+#        min-versions-to-keep: 10
+#        delete-only-untagged-versions: 'true'
