@@ -67,7 +67,7 @@ jobs:
     - name: Install dependencies
       run: |
         set -x
-        .github/scripts/install-rtai.sh  ${{ matrix.debian_version }}
+        .github/scripts/install-rtai.sh trixie
         .github/scripts/install-deps.sh
     - name: Build RIP RTAI
       run: |
@@ -124,6 +124,7 @@ jobs:
       continue-on-error: true
       run: |
         set -x
+        git config --global --add safe.directory .
         git fetch --recurse-submodules=no https://github.com/linuxcnc/linuxcnc refs/tags/*:refs/tags/*
         scripts/cppcheck.sh
     - name: Shellcheck
@@ -165,15 +166,13 @@ jobs:
     runs-on: ${{ matrix.runner }}
     strategy:
       matrix:
-        #runner: ["ubuntu-24.04", "ubuntu-24.04-arm"]
-        #debian_version:  ["bookworm", "trixie", "sid"]
-        runner: ["ubuntu-24.04"]
-        debian_version:  ["trixie"]
+        runner: ["ubuntu-24.04", "ubuntu-24.04-arm"]
+        debian_version:  ["bookworm", "trixie", "sid"]
         include:
           - runner_arch: amd64
             runner: ubuntu-24.04
-          #- runner_arch: arm64
-          #  runner: ubuntu-24.04-arm
+          - runner_arch: arm64
+            runner: ubuntu-24.04-arm
     container:
       image: ghcr.io/${{ github.repository_owner }}/linuxcnc/build-container:${{ matrix.debian_version }}-${{ matrix.runner_arch }}-latest
       # IPC_OWNER is needed for shmget IPC_CREAT
@@ -247,15 +246,11 @@ jobs:
     runs-on: ${{ matrix.runner }}
     strategy:
       matrix:
-        #runner: ["ubuntu-24.04", "ubuntu-24.04-arm"]
-        #debian_version:  ["bookworm", "trixie", "sid"]
         runner: ["ubuntu-24.04"]
-        debian_version:  ["trixie"]
+        debian_version:  ["bookworm", "trixie", "sid"]
         include:
           - runner_arch: amd64
             runner: ubuntu-24.04
-          #- runner_arch: arm64
-          #  runner: ubuntu-24.04-arm
     container:
       image: ghcr.io/${{ github.repository_owner }}/linuxcnc/build-container:${{ matrix.debian_version }}-${{ matrix.runner_arch }}-latest
       # IPC_OWNER is needed for shmget IPC_CREAT
