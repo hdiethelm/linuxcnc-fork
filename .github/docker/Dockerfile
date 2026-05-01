@@ -10,7 +10,8 @@ FROM $BASE_IMAGE
 RUN apt-get update
 RUN apt-get install -y \
         devscripts equivs build-essential lintian clang git lsb-release \
-        python3 gpg dirmngr sudo xauth curl --no-install-recommends && \
+        python3 gpg dirmngr sudo xauth curl \
+        cppcheck shellcheck --no-install-recommends && \
      apt-get clean
 
 #Install linuxcnc dependencys
