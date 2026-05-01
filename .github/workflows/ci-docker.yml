@@ -104,7 +104,7 @@ jobs:
         DEBFULLNAME: LinuxCNC Github CI Robot
         DEBIAN_FRONTEND: noninteractive
       run: |
-        set -ex
+        set -x
         git config --global --add safe.directory .
         debian/configure
         debian/update-dch-from-git
@@ -116,19 +116,19 @@ jobs:
       env:
         DEBIAN_FRONTEND: noninteractive
       run: |
-        set -ex
+        set -x
         apt-get -y install ../*.deb --no-install-recommends
     - name: Test debian packages
       env:
         DEBIAN_FRONTEND: noninteractive
       run: |
-        set -ex
+        set -x
         #Tests must be run as user, not root
         chown -R linuxcnc:linuxcnc .
         sudo -u linuxcnc ./scripts/runtests -p ./tests
     - name: Gather build artifacts
       run: |
-        set -ex
+        set -x
         ARCH=$(dpkg --print-architecture)
         DIST=$(echo ${{ matrix.debian_version }} | cut -d : -f 2)
         OUTDIR="artifacts/${DIST}/${ARCH}"
@@ -142,6 +142,87 @@ jobs:
       run: |
         echo "dist=$(echo ${{ matrix.debian_version }} | cut -d : -f 2)" >> $GITHUB_OUTPUT
         echo "arch=$(dpkg --print-architecture)" >> $GITHUB_OUTPUT
+    - name: Upload build artifacts
+      uses: actions/upload-artifact@v7
+      with:
+        name: linuxcnc-${{ steps.meta.outputs.dist }}-${{ steps.meta.outputs.arch }}
+        path: artifacts/${{ steps.meta.outputs.dist }}/${{ steps.meta.outputs.arch }}
+        if-no-files-found: error
+
+  package-indep:
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      matrix:
+        #runner: ["ubuntu-24.04", "ubuntu-24.04-arm"]
+        #debian_version:  ["bookworm", "trixie", "sid"]
+        runner: ["ubuntu-24.04"]
+        debian_version:  ["trixie"]
+        include:
+          - runner_arch: x64
+            runner: ubuntu-24.04
+          #- runner_arch: arm64
+          #  runner: ubuntu-24.04-arm
+    container:
+      image: ghcr.io/${{ github.repository_owner }}/linuxcnc/build-container:${{ matrix.debian_version }}-${{ matrix.runner_arch }}-latest
+      # IPC_OWNER is needed for shmget IPC_CREAT
+      # SYS_ADMIN is needed for shmctl IPC_SET
+      options: --cap-add=IPC_OWNER --cap-add=SYS_ADMIN
+    steps:
+    - name: Dump GitHub context
+      env:
+        GITHUB_CONTEXT: ${{ toJson(github) }}
+      run: |
+        echo Number of CPUs: $(nproc)
+        echo "$GITHUB_CONTEXT"
+    - name: Checkout repository
+      uses: actions/checkout@v6
+      with:
+        submodules: false
+        # "fetch-depth: 0" fetches all of history, this is needed by
+        # our build system to determine the version from tags
+        fetch-depth: 0
+    - name: Add linuxcnc.org deb archive
+      env:
+        DEBIAN_FRONTEND: noninteractive
+      run: |
+        .github/scripts/add-linuxcnc-repository.sh ${{ matrix.debian_version }}
+        apt-get --quiet update
+    - name: Build architecture-independent Debian packages
+      env:
+        DEBEMAIL: emc-developers@lists.sourceforge.net
+        DEBFULLNAME: LinuxCNC Github CI Robot
+        DEBIAN_FRONTEND: noninteractive
+      run: |
+        set -x
+        git config --global --add safe.directory .
+        debian/configure
+        debian/update-dch-from-git
+        scripts/get-version-from-git | sed -re 's/^v(.*)$/\1/' >| VERSION; cat VERSION
+        git diff
+        apt-get -y build-dep --indep-only .
+        debuild -us -uc --build=source,all
+    - name: Install debian packages
+      env:
+        DEBIAN_FRONTEND: noninteractive
+      run: |
+        set -x
+        apt-get -y install ../*.deb --no-install-recommends
+    - name: Gather build artifacts
+      run: |
+        set -x
+        ARCH=all
+        DIST=$(echo ${{ matrix.debian_version }} | cut -d : -f 2)
+        OUTDIR="artifacts/${DIST}/${ARCH}"
+        mkdir -p "$OUTDIR"
+        cp -v $(find .. -maxdepth 1 -type f | LC_ALL=C sort) "$OUTDIR" || true
+        (cd "$OUTDIR" && sha256sum * > SHA256SUMS.txt)
+        echo "DIST=$DIST" >> "$GITHUB_ENV"
+        echo "ARCH=$ARCH" >> "$GITHUB_ENV"
+    - name: Compute artifact metadata
+      id: meta
+      run: |
+        echo "dist=$(echo ${{ matrix.debian_version }} | cut -d : -f 2)" >> $GITHUB_OUTPUT
+        echo "arch=all" >> $GITHUB_OUTPUT
     - name: Upload build artifacts
       uses: actions/upload-artifact@v7
       with:
