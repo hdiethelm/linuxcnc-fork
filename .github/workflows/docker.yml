@@ -40,9 +40,6 @@ jobs:
       with:
         submodules: false
         fetch-depth: 1
-    - name: Copy debian folder to docker
-      run: |
-        cp -r debian .github/docker/
     - name: Set up Docker buildx
       uses: docker/setup-buildx-action@v4
     - name: Log in to the Container registry
@@ -54,7 +51,8 @@ jobs:
     - name: Build and push Docker image
       uses: docker/build-push-action@v7
       with:
-        context: .github/docker
+        context: .
+        file: .github/docker/Dockerfile
         build-args: |
             BASE_IMAGE=debian:${{ matrix.debian_version }}
         push: true
