@@ -21,7 +21,7 @@ jobs:
         runner: ["ubuntu-24.04"]
         debian_version:  ["trixie"]
         include:
-          - runner_arch: x64
+          - runner_arch: amd64
             runner: ubuntu-24.04
           #- runner_arch: arm64
           #  runner: ubuntu-24.04-arm
