@@ -13,7 +13,7 @@ ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update
 RUN apt-get install -y \
         devscripts equivs build-essential lintian clang git lsb-release \
-        python3 gpg dirmngr sudo xauth curl \
+        python3 gpg dirmngr sudo xauth curl kmod \
         cppcheck shellcheck --no-install-recommends && \
      apt-get clean
 
