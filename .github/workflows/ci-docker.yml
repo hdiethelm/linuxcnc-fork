@@ -320,7 +320,7 @@ jobs:
         path: release_artifacts
     - name: Prepare upload assets
       run: |
-        set -e
+        set -x
         mkdir -p upload
         echo "Downloaded artifacts layout:" && find release_artifacts -maxdepth 3 -print | sed 's/^/  /'
         for d in release_artifacts/*; do
