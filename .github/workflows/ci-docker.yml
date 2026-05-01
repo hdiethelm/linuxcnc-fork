@@ -1,0 +1,61 @@
+# vim: sw=2
+
+name: Build CI using docker images
+
+on:
+  push:
+  pull_request:
+  release:
+    types: [published]
+  check_suite:
+    types: [rerequested]
+
+permissions:
+  contents: read #  to fetch code (actions/checkout)
+
+jobs:
+
+  rip-and-test:
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      matrix:
+        #runner: ["ubuntu-24.04", "ubuntu-24.04-arm"]
+        #debian_version:  ["bookworm", "trixie", "sid"]
+        runner: ["ubuntu-24.04"]
+        debian_version:  ["trixie"]
+        include:
+          - runner_arch: x64
+            runner: ubuntu-24.04
+          #- runner_arch: arm64
+          #  runner: ubuntu-24.04-arm
+    container:
+      image: ghcr.io/${{ github.repository_owner }}/linuxcnc/build-container:${{ matrix.debian_version }}-${{ matrix.runner_arch }}-latest
+    steps:
+    - name: Dump GitHub context
+      env:
+        GITHUB_CONTEXT: ${{ toJson(github) }}
+      run: |
+        echo Number of CPUs: $(nproc)
+        echo "$GITHUB_CONTEXT"
+    - name: Checkout repository
+      uses: actions/checkout@v6
+      with:
+        submodules: false
+        fetch-depth: 1
+    - name: Install dependencies
+      run: |
+        set -x
+        .github/scripts/install-deps.sh
+    - name: Build RIP GCC
+      run: |
+        set -x
+        cd src
+        ./autogen.sh
+        ./configure --disable-check-runtime-deps --enable-werror
+        make -O -j$((1+$(nproc))) default pycheck V=1
+    - name: Test
+      run: |
+        set -x
+        #Tests must be run as user, not root
+        chown -R linuxcnc:linuxcnc .
+        sudo -u linuxcnc scripts/rip-environment runtests -p
