@@ -3,12 +3,9 @@
 name: Build Docker
 
 on:
-  push:
-  pull_request:
-  release:
-    types: [published]
-  check_suite:
-    types: [rerequested]
+  workflow_dispatch:
+  schedule:
+     - cron: "18 0 * * 1"
 
 permissions:
   contents: read  # to fetch code (actions/checkout)
