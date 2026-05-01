@@ -6,6 +6,9 @@ ARG BASE_IMAGE
 
 FROM $BASE_IMAGE
 
+# Set DEBIAN_FRONTEND to noninteractive
+ENV DEBIAN_FRONTEND=noninteractive
+
 #Install base dependencys
 RUN apt-get update
 RUN apt-get install -y \

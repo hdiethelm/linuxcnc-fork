@@ -194,8 +194,6 @@ jobs:
         # our build system to determine the version from tags
         fetch-depth: 0
     - name: Add linuxcnc.org deb archive
-      env:
-        DEBIAN_FRONTEND: noninteractive
       run: |
         .github/scripts/add-linuxcnc-repository.sh ${{ matrix.debian_version }}
         apt-get --quiet update
@@ -203,7 +201,6 @@ jobs:
       env:
         DEBEMAIL: emc-developers@lists.sourceforge.net
         DEBFULLNAME: LinuxCNC Github CI Robot
-        DEBIAN_FRONTEND: noninteractive
       run: |
         set -x
         git config --global --add safe.directory .
@@ -214,14 +211,10 @@ jobs:
         apt-get -y build-dep --arch-only .
         debuild -us -uc --build=any
     - name: Install debian packages
-      env:
-        DEBIAN_FRONTEND: noninteractive
       run: |
         set -x
         apt-get -y install ../*.deb --no-install-recommends
     - name: Test debian packages
-      env:
-        DEBIAN_FRONTEND: noninteractive
       run: |
         set -x
         #Tests must be run as user, not root
@@ -283,8 +276,6 @@ jobs:
         # our build system to determine the version from tags
         fetch-depth: 0
     - name: Add linuxcnc.org deb archive
-      env:
-        DEBIAN_FRONTEND: noninteractive
       run: |
         .github/scripts/add-linuxcnc-repository.sh ${{ matrix.debian_version }}
         apt-get --quiet update
@@ -292,7 +283,6 @@ jobs:
       env:
         DEBEMAIL: emc-developers@lists.sourceforge.net
         DEBFULLNAME: LinuxCNC Github CI Robot
-        DEBIAN_FRONTEND: noninteractive
       run: |
         set -x
         git config --global --add safe.directory .
@@ -303,8 +293,6 @@ jobs:
         apt-get -y build-dep --indep-only .
         debuild -us -uc --build=source,all
     - name: Install debian packages
-      env:
-        DEBIAN_FRONTEND: noninteractive
       run: |
         set -x
         apt-get -y install ../*.deb --no-install-recommends
