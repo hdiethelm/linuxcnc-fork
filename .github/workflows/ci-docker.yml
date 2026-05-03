@@ -63,7 +63,8 @@ jobs:
       run: |
         echo Number of CPUs: $(nproc)
         echo "$GITHUB_CONTEXT"
-    - uses: actions/checkout@v6
+    - name: Checkout repository
+      uses: actions/checkout@v6
       with:
         submodules: false
         fetch-depth: 1
@@ -95,7 +96,8 @@ jobs:
       run: |
         echo Number of CPUs: $(nproc)
         echo "$GITHUB_CONTEXT"
-    - uses: actions/checkout@v6
+    - name: Checkout repository
+      uses: actions/checkout@v6
       with:
         submodules: false
         fetch-depth: 1
@@ -125,7 +127,8 @@ jobs:
     container:
       image: ghcr.io/${{ github.repository_owner }}/linuxcnc/build-container:trixie-amd64-latest
     steps:
-    - uses: actions/checkout@v6
+    - name: Checkout repository
+      uses: actions/checkout@v6
       with:
         submodules: false
         fetch-depth: 1
@@ -150,7 +153,8 @@ jobs:
       run: |
         echo Number of CPUs: $(nproc)
         echo "$GITHUB_CONTEXT"
-    - uses: actions/checkout@v6
+    - name: Checkout repository
+      uses: actions/checkout@v6
       with:
         submodules: false
         fetch-depth: 1
