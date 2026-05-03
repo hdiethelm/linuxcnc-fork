@@ -51,6 +51,9 @@ jobs:
         chmod 0777 bin
         #Tests must be run as user, not root
         sudo -u linuxcnc scripts/rip-environment runtests -p
+    - name: Verify no untracked or modified files after test
+      run: |
+        .github/scripts/verify-clean-repo.sh
 
   rip-rtai:
     runs-on: ubuntu-24.04
@@ -118,6 +121,9 @@ jobs:
         chmod 0777 bin
         #Tests must be run as user, not root
         sudo -u linuxcnc scripts/rip-environment runtests -p
+    - name: Verify no untracked or modified files after test
+      run: |
+        .github/scripts/verify-clean-repo.sh
 
   cppcheck:
     runs-on: ubuntu-24.04
@@ -219,6 +225,9 @@ jobs:
         #Tests must be run as user, not root
         chmod 0777 $(find tests/ -type d) # make test dirs world-writable for the testrunner
         sudo -u linuxcnc ./scripts/runtests -p ./tests
+    - name: Verify no untracked or modified files after test
+      run: |
+        .github/scripts/verify-clean-repo.sh ':(exclude)VERSION' ':(exclude)debian/changelog'
     - name: Gather build artifacts
       run: |
         set -x
