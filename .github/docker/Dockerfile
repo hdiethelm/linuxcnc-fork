@@ -20,8 +20,7 @@ RUN apt-get install -y \
 #Install linuxcnc dependencys
 RUN --mount=type=bind,source=.,target=/linuxcnc-src,rw \
      cd linuxcnc-src && \
-     debian/configure && \
-     apt-get build-dep -y . && \
+     .github/scripts/install-deps.sh && \
      apt-get clean
 
 #Add a user for linuxcnc with sudo nopasswd

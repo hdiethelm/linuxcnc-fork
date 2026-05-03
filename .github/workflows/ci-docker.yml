@@ -38,18 +38,17 @@ jobs:
     - name: Build RIP GCC
       run: |
         set -x
-        cd src
-        ./autogen.sh
-        ./configure --disable-check-runtime-deps --enable-werror
-        make -O -j$((1+$(nproc))) default pycheck V=1
+        .github/scripts/build-rip.sh
     - name: Verify no untracked or modified files after build
       run: |
         .github/scripts/verify-clean-repo.sh
     - name: Test
       run: |
         set -x
+        #Make test dirs world-writable for the testrunner
+        chmod 0777 $(find tests/ -type d)
+        chmod 0777 rtlib
         #Tests must be run as user, not root
-        chmod 0777 $(find tests/ -type d) # make test dirs world-writable for the testrunner
         sudo -u linuxcnc scripts/rip-environment runtests -p
 
   rip-rtai:
@@ -76,11 +75,8 @@ jobs:
     - name: Build RIP RTAI
       run: |
         set -x
-        cd src
-        ./autogen.sh
         #It is save to assume there is only one /usr/realtime-* folder
-        ./configure --with-realtime=/usr/realtime-* --disable-check-runtime-deps --enable-werror
-        make -O -j$((1+$(nproc))) default pycheck V=1
+        .github/scripts/build-rip.sh --with-realtime=/usr/realtime-*
     - name: Verify no untracked or modified files after build
       run: |
         .github/scripts/verify-clean-repo.sh
@@ -108,18 +104,17 @@ jobs:
     - name: Build RIP Clang
       run: |
         set -x
-        cd src
-        ./autogen.sh
-        CC=clang CXX=clang++ ./configure --disable-check-runtime-deps --enable-werror
-        make -O -j$((1+$(nproc))) default pycheck V=1
+        CC=clang CXX=clang++ .github/scripts/build-rip.sh
     - name: Verify no untracked or modified files after build
       run: |
         .github/scripts/verify-clean-repo.sh
     - name: Test
       run: |
         set -x
+        #Make test dirs world-writable for the testrunner
+        chmod 0777 $(find tests/ -type d)
+        chmod 0777 rtlib
         #Tests must be run as user, not root
-        chmod 0777 $(find tests/ -type d) # make test dirs world-writable for the testrunner
         sudo -u linuxcnc scripts/rip-environment runtests -p
 
   cppcheck:
@@ -165,13 +160,7 @@ jobs:
     - name: Build HTML docmentation
       run: |
         set -x
-        cd src
-        ./autogen.sh
-        ./configure --disable-check-runtime-deps --enable-build-documentation=html
-        make -O -j$((1+$(nproc))) manpages
-        make -O -j$((1+$(nproc))) translateddocs
-        make -O -j$((1+$(nproc))) docs
-        # Note that the package build covers html docs
+        .github/scripts/build-doc.sh
     - name: Verify no untracked or modified files after build
       continue-on-error: true #ToDo: Check what to do with the changed .po files
       run: |
@@ -214,12 +203,7 @@ jobs:
       run: |
         set -x
         git config --global --add safe.directory ${PWD}
-        debian/configure
-        debian/update-dch-from-git
-        scripts/get-version-from-git | sed -re 's/^v(.*)$/\1/' >| VERSION; cat VERSION
-        git diff
-        apt-get -y build-dep --arch-only .
-        debuild -us -uc --build=any
+        .github/scripts/build-package-arch.sh
     - name: Verify no untracked or modified files after build
       run: |
         .github/scripts/verify-clean-repo.sh ':(exclude)VERSION' ':(exclude)debian/changelog'
@@ -291,12 +275,7 @@ jobs:
       run: |
         set -x
         git config --global --add safe.directory ${PWD}
-        debian/configure
-        debian/update-dch-from-git
-        scripts/get-version-from-git | sed -re 's/^v(.*)$/\1/' >| VERSION; cat VERSION
-        git diff
-        apt-get -y build-dep --indep-only .
-        debuild -us -uc --build=source,all
+        .github/scripts/build-package-indep.sh
     - name: Verify no untracked or modified files after build
       continue-on-error: true #ToDo: Check what to do with the changed .po files
       run: |
