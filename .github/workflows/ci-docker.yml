@@ -48,6 +48,7 @@ jobs:
         #Make test dirs world-writable for the testrunner
         chmod 0777 $(find tests/ -type d)
         chmod 0777 rtlib
+        chmod 0777 bin
         #Tests must be run as user, not root
         sudo -u linuxcnc scripts/rip-environment runtests -p
 
@@ -114,6 +115,7 @@ jobs:
         #Make test dirs world-writable for the testrunner
         chmod 0777 $(find tests/ -type d)
         chmod 0777 rtlib
+        chmod 0777 bin
         #Tests must be run as user, not root
         sudo -u linuxcnc scripts/rip-environment runtests -p
 
