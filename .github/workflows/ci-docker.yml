@@ -170,9 +170,9 @@ jobs:
         set -x
         .github/scripts/build-doc.sh
     - name: Verify no untracked or modified files after build
-      continue-on-error: true #ToDo: Check what to do with the changed .po files
       run: |
-        .github/scripts/verify-clean-repo.sh
+        #*.po and documentation.pot are modifyed by build. Ignore them for now.
+        .github/scripts/verify-clean-repo.sh ':(exclude)docs/po/*.po' ':(exclude)docs/po/documentation.pot'
 
   package-arch:
     runs-on: ${{ matrix.runner }}
@@ -288,9 +288,9 @@ jobs:
         git config --global --add safe.directory ${PWD}
         .github/scripts/build-package-indep.sh
     - name: Verify no untracked or modified files after build
-      continue-on-error: true #ToDo: Check what to do with the changed .po files
       run: |
-        .github/scripts/verify-clean-repo.sh ':(exclude)VERSION' ':(exclude)debian/changelog'
+        #*.po and documentation.pot are modifyed by build. Ignore them for now.
+        .github/scripts/verify-clean-repo.sh ':(exclude)VERSION' ':(exclude)debian/changelog' ':(exclude)docs/po/*.po' ':(exclude)docs/po/documentation.pot'
     - name: Install debian packages
       run: |
         set -x
