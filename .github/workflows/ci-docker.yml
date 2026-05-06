@@ -31,6 +31,10 @@ jobs:
       with:
         submodules: false
         fetch-depth: 1
+    - name: Git config
+      run: |
+        set -x
+        git config --global --add safe.directory ${PWD}
     - name: Install dependencies
       run: |
         set -x
@@ -71,6 +75,10 @@ jobs:
       with:
         submodules: false
         fetch-depth: 1
+    - name: Git config
+      run: |
+        set -x
+        git config --global --add safe.directory ${PWD}
     - name: Install dependencies
       run: |
         set -x
@@ -101,6 +109,10 @@ jobs:
       with:
         submodules: false
         fetch-depth: 1
+    - name: Git config
+      run: |
+        set -x
+        git config --global --add safe.directory ${PWD}
     - name: Install dependencies
       run: |
         set -x
@@ -135,6 +147,10 @@ jobs:
       with:
         submodules: false
         fetch-depth: 1
+    - name: Git config
+      run: |
+        set -x
+        git config --global --add safe.directory ${PWD}
     - name: Cppcheck
       continue-on-error: true
       run: |
@@ -161,6 +177,10 @@ jobs:
       with:
         submodules: false
         fetch-depth: 1
+    - name: Git config
+      run: |
+        set -x
+        git config --global --add safe.directory ${PWD}
     - name: Install dependencies
       run: |
         set -x
@@ -204,13 +224,16 @@ jobs:
         # "fetch-depth: 0" fetches all of history, this is needed by
         # our build system to determine the version from tags
         fetch-depth: 0
+    - name: Git config
+      run: |
+        set -x
+        git config --global --add safe.directory ${PWD}
     - name: Build architecture-specific Debian packages
       env:
         DEBEMAIL: emc-developers@lists.sourceforge.net
         DEBFULLNAME: LinuxCNC Github CI Robot
       run: |
         set -x
-        git config --global --add safe.directory ${PWD}
         .github/scripts/build-package-arch.sh
     - name: Verify no untracked or modified files after build
       run: |
@@ -279,13 +302,16 @@ jobs:
         # "fetch-depth: 0" fetches all of history, this is needed by
         # our build system to determine the version from tags
         fetch-depth: 0
+    - name: Git config
+      run: |
+        set -x
+        git config --global --add safe.directory ${PWD}
     - name: Build architecture-independent Debian packages
       env:
         DEBEMAIL: emc-developers@lists.sourceforge.net
         DEBFULLNAME: LinuxCNC Github CI Robot
       run: |
         set -x
-        git config --global --add safe.directory ${PWD}
         .github/scripts/build-package-indep.sh
     - name: Verify no untracked or modified files after build
       run: |
