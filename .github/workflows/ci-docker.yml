@@ -42,7 +42,7 @@ jobs:
     - name: Build RIP GCC
       run: |
         set -x
-        .github/scripts/build-rip.sh
+        .github/scripts/build-rip.sh --with-realtime=uspace
     - name: Verify no untracked or modified files after build
       run: |
         .github/scripts/verify-clean-repo.sh
@@ -120,7 +120,7 @@ jobs:
     - name: Build RIP Clang
       run: |
         set -x
-        CC=clang CXX=clang++ .github/scripts/build-rip.sh
+        CC=clang CXX=clang++ .github/scripts/build-rip.sh --with-realtime=uspace
     - name: Verify no untracked or modified files after build
       run: |
         .github/scripts/verify-clean-repo.sh
