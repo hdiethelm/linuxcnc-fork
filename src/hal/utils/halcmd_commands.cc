@@ -338,6 +338,31 @@ int do_addf_cmd(char *func, char *thread, char **opt) {
     return retval;
 }
 
+int do_initf_cmd(char *func, char *thread, char **opt) {
+    /* usage: initf <funct> <thread> [position]
+       position has the same meaning as in addf: +N from start of the init
+       list (+1 = run first), -N from end (-1 = run last, default), 0 illegal.
+       The function runs once in realtime context in a dedicated cycle before
+       the cyclic funct list; next cyclic cycle wakes one period later. */
+    char *position_str = opt ? opt[0] : NULL;
+    int position = -1;
+    int retval;
+
+    if(position_str && *position_str) position = atoi(position_str);
+
+    retval = hal_init_funct_to_thread(func, thread, position);
+    if(retval == 0) {
+        halcmd_info("Init function '%s' registered on thread '%s'\n",
+                    func, thread);
+    } else if(retval == -EALREADY) {
+        halcmd_error("initf: thread '%s' init cycle already executed; "
+                     "'%s' was NOT registered\n", thread, func);
+    } else {
+        halcmd_error("initf failed\n");
+    }
+    return retval;
+}
+
 int do_alias_cmd(char *pinparam, char *name, char *alias) {
     int retval;
 

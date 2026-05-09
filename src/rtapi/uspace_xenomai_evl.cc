@@ -194,6 +194,16 @@ struct XenomaiApp : RtapiApp {
         return task->id;
     }
 
+    void task_self_resync() {
+        struct rtapi_task *task = reinterpret_cast<rtapi_task *>(pthread_getspecific(key));
+        if (!task)
+            return;
+        /* Set nextstart = now. The next rtapi_wait() advances it by
+           (period + pll_correction) and sleeps until then, giving exactly one
+           fresh period from this point. */
+        evl_read_clock(EVL_CLOCK_MONOTONIC, &task->nextstart);
+    }
+
     static pthread_once_t key_once;
     static pthread_key_t key;
     static void init_key(void) {

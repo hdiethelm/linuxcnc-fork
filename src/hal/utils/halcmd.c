@@ -136,6 +136,7 @@ void halcmd_shutdown(void) {
 
 struct halcmd_command halcmd_commands[] = {
     {"addf",    FUNCT(do_addf_cmd),    A_TWO | A_PLUS },
+    {"initf",   FUNCT(do_initf_cmd), A_TWO | A_PLUS },
     {"alias",   FUNCT(do_alias_cmd),   A_THREE },
     {"delf",    FUNCT(do_delf_cmd),    A_TWO | A_OPTIONAL },
     {"delsig",  FUNCT(do_delsig_cmd),  A_ONE },
