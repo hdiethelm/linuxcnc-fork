@@ -641,6 +641,7 @@ struct Posix : RtapiApp
     int task_pause(int task_id);
     int task_resume(int task_id);
     int task_self();
+    void task_self_resync();
     long long task_pll_get_reference(void);
     int task_pll_set_correction(long value);
     void wait();
@@ -1182,6 +1183,16 @@ int Posix::task_self() {
     return task->id;
 }
 
+void Posix::task_self_resync() {
+    struct rtapi_task *task = reinterpret_cast<rtapi_task *>(pthread_getspecific(key));
+    if (!task)
+        return;
+    /* Set nextstart = now. The next rtapi_wait() advances it by
+        (period + pll_correction) and sleeps until then, giving exactly one
+        fresh period from this point. */
+    clock_gettime(CLOCK_MONOTONIC, &task->nextstart);
+}
+
 void Posix::wait() {
     if(do_thread_lock)
         pthread_mutex_unlock(&thread_lock);
@@ -1293,6 +1304,10 @@ int rtapi_task_resume(int task_id)
 int rtapi_task_self()
 {
     return App().task_self();
+}
+
+void rtapi_task_self_resync(void) {
+    App().task_self_resync();
 }
 
 long long rtapi_task_pll_get_reference(void)
