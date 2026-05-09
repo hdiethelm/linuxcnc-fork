@@ -799,6 +799,25 @@ extern int hal_thread_delete(const char *name);
 extern int hal_add_funct_to_thread(const char *funct_name, const char *thread_name,
     int position);
 
+/** hal_init_funct_to_thread() registers a function to run exactly once,
+    in the realtime context of 'thread_name', before the thread executes
+    any cyclic (addf-registered) function. The init list is invoked in a
+    dedicated "special cycle" the first time the thread observes
+    threads_running == 1; the cyclic funct list is skipped during that
+    cycle. After the init list returns, the thread's period is re-anchored
+    so the next cyclic cycle wakes one full period later, which both
+    avoids the spurious "unexpected realtime delay" warning that would
+    otherwise follow a long init and gives the cyclic pass a clean
+    starting boundary.
+    'position' uses the same semantics as hal_add_funct_to_thread():
+    positive values count from the start of the init list (+1 runs first),
+    negative values count from the end (-1 runs last); 0 is illegal.
+    Calls made after the init cycle has already run return -EALREADY and
+    have no effect.
+    Returns 0, -EALREADY, or a negative error code. Call only from user
+    space or init code, not from realtime code. */
+extern int hal_init_funct_to_thread(const char *funct_name, const char *thread_name, int position);
+
 /** hal_del_funct_from_thread() removes a function from a thread.
     'funct_name' is the name of the function, as specified in
     a call to hal_export_funct().

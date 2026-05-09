@@ -1062,6 +1062,10 @@ int rtapi_task_self() {
     return App().task_self();
 }
 
+void rtapi_task_self_resync(void) {
+    App().task_self_resync();
+}
+
 long long rtapi_task_pll_get_reference(void) {
     return App().task_pll_get_reference();
 }

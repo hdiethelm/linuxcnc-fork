@@ -2386,6 +2386,119 @@ int hal_add_funct_to_thread(const char *funct_name, const char *thread_name, int
     return 0;
 }
 
+int hal_init_funct_to_thread(const char *funct_name, const char *thread_name, int position)
+{
+    hal_thread_t *thread;
+    hal_funct_t *funct;
+    hal_list_t *list_root, *list_entry;
+    int n;
+    hal_funct_entry_t *funct_entry;
+
+    if (hal_data == 0) {
+        rtapi_print_msg(RTAPI_MSG_ERR,
+            "HAL: ERROR: init_funct called before init\n");
+        return -EINVAL;
+    }
+
+    if (hal_data->lock & HAL_LOCK_CONFIG) {
+        rtapi_print_msg(RTAPI_MSG_ERR,
+            "HAL: ERROR: init_funct_to_thread called while HAL is locked\n");
+        return -EPERM;
+    }
+
+    if (position == 0) {
+        rtapi_print_msg(RTAPI_MSG_ERR, "HAL: ERROR: bad position: 0\n");
+        return -EINVAL;
+    }
+
+    if (funct_name == 0 || thread_name == 0) {
+        rtapi_print_msg(RTAPI_MSG_ERR,
+            "HAL: ERROR: missing function or thread name\n");
+        return -EINVAL;
+    }
+
+    rtapi_print_msg(RTAPI_MSG_DBG,
+        "HAL: adding init function '%s' to thread '%s'\n",
+        funct_name, thread_name);
+
+    rtapi_mutex_get(&(hal_data->mutex));
+
+    funct = halpr_find_funct_by_name(funct_name);
+    if (funct == 0) {
+        rtapi_mutex_give(&(hal_data->mutex));
+        rtapi_print_msg(RTAPI_MSG_ERR,
+            "HAL: ERROR: function '%s' not found\n", funct_name);
+        return -EINVAL;
+    }
+
+    thread = halpr_find_thread_by_name(thread_name);
+    if (thread == 0) {
+        rtapi_mutex_give(&(hal_data->mutex));
+        rtapi_print_msg(RTAPI_MSG_ERR,
+            "HAL: ERROR: thread '%s' not found\n", thread_name);
+        return -EINVAL;
+    }
+
+    /* once the special init cycle has executed, further initf calls are a
+       no-op so config order doesn't depend on whether start_threads has been
+       issued. Surface this with -EALREADY so halcmd can warn loudly. */
+    if (thread->init_done) {
+        rtapi_mutex_give(&(hal_data->mutex));
+        rtapi_print_msg(RTAPI_MSG_WARN,
+            "HAL: WARNING: thread '%s' init cycle already ran; '%s' will not be invoked\n",
+            thread_name, funct_name);
+        return -EALREADY;
+    }
+
+    /* find insertion point in init list (same semantics as
+       hal_add_funct_to_thread: +N from head, -N from tail) */
+    list_root = &(thread->init_funct_list);
+    list_entry = list_root;
+    n = 0;
+    if (position > 0) {
+        while (++n < position) {
+            list_entry = list_next(list_entry);
+            if (list_entry == list_root) {
+                rtapi_mutex_give(&(hal_data->mutex));
+                rtapi_print_msg(RTAPI_MSG_ERR,
+                    "HAL: ERROR: position '%d' is too high\n", position);
+                return -EINVAL;
+            }
+        }
+    } else {
+        while (--n > position) {
+            list_entry = list_prev(list_entry);
+            if (list_entry == list_root) {
+                rtapi_mutex_give(&(hal_data->mutex));
+                rtapi_print_msg(RTAPI_MSG_ERR,
+                    "HAL: ERROR: position '%d' is too low\n", position);
+                return -EINVAL;
+            }
+        }
+        list_entry = list_prev(list_entry);
+    }
+
+    /* allow the same funct to be on funct_list and init_funct_list, and to be
+       referenced multiple times in the init list itself (no users-cap check) */
+    funct_entry = alloc_funct_entry_struct();
+    if (funct_entry == 0) {
+        rtapi_mutex_give(&(hal_data->mutex));
+        rtapi_print_msg(RTAPI_MSG_ERR,
+            "HAL: ERROR: insufficient memory for thread->init function link\n");
+        return -ENOMEM;
+    }
+    funct_entry->funct_ptr = SHMOFF(funct);
+    funct_entry->arg = funct->arg;
+    funct_entry->funct = funct->funct;
+
+    list_add_after((hal_list_t *) funct_entry, list_entry);
+
+    funct->users++;
+
+    rtapi_mutex_give(&(hal_data->mutex));
+    return 0;
+}
+
 int hal_del_funct_from_thread(const char *funct_name, const char *thread_name)
 {
     hal_thread_t *thread;
@@ -3007,7 +3120,36 @@ static void thread_task(void *arg)
 
     thread = arg;
     while (1) {
-	if (hal_data->threads_running > 0) {
+        if (hal_data->threads_running > 0 && !thread->init_done) {
+            /* special init cycle: run init_funct_list once with no
+               timing measurement, re-anchor the period so the long
+               init does not poison maxtime, does not trip the
+               "unexpected realtime delay" catch-up loop, and lands
+               the next wakeup at a clean period boundary (used to
+               keep EtherCAT send clear of SYNC0). The cyclic
+               funct_list is intentionally NOT executed in this
+               cycle -- the next cycle is the first clean cyclic
+               pass. After init_done is latched, drain the list back
+               to the free pool: every entry has already run, the
+               list serves no further purpose, and a halcmd 'initf'
+               arriving later is rejected by the init_done check. */
+            funct_root = (hal_funct_entry_t *) & (thread->init_funct_list);
+            funct_entry = SHMPTR(funct_root->links.next);
+            while (funct_entry != funct_root) {
+                funct_entry->funct(funct_entry->arg, thread->period);
+                funct_entry = SHMPTR(funct_entry->links.next);
+            }
+            rtapi_task_self_resync();
+            thread->init_done = 1;
+            /* drain the list now that the init pass is complete */
+            funct_entry = SHMPTR(funct_root->links.next);
+            while (funct_entry != funct_root) {
+                hal_funct_entry_t *next_entry = SHMPTR(funct_entry->links.next);
+                list_remove_entry((hal_list_t *) funct_entry);
+                free_funct_entry_struct(funct_entry);
+                funct_entry = next_entry;
+            }
+        } else if (hal_data->threads_running > 0) {
 	    /* point at first function on function list */
 	    funct_root = (hal_funct_entry_t *) & (thread->funct_list);
 	    funct_entry = SHMPTR(funct_root->links.next);
@@ -3391,6 +3533,8 @@ static hal_thread_t *alloc_thread_struct(void)
 	p->priority = 0;
 	p->task_id = 0;
 	list_init_entry(&(p->funct_list));
+	list_init_entry(&(p->init_funct_list));
+	p->init_done = 0;
 	p->name[0] = '\0';
     }
     return p;
@@ -3634,6 +3778,20 @@ static void free_funct_struct(hal_funct_t * funct)
 		    free_funct_entry_struct(funct_entry);
 		} else {
 		    /* no match, try the next one */
+		    list_entry = list_next(list_entry);
+		}
+	    }
+	    /* also sweep the init function list so unloaded comps don't
+	       leave dangling init entries that would crash on the next
+	       start_threads */
+	    list_root = &(thread->init_funct_list);
+	    list_entry = list_next(list_root);
+	    while (list_entry != list_root) {
+		funct_entry = (hal_funct_entry_t *) list_entry;
+		if (SHMPTR(funct_entry->funct_ptr) == funct) {
+		    list_entry = list_remove_entry(list_entry);
+		    free_funct_entry_struct(funct_entry);
+		} else {
 		    list_entry = list_next(list_entry);
 		}
 	    }
@@ -4488,6 +4646,7 @@ EXPORT_SYMBOL(hal_export_functf);
 EXPORT_SYMBOL(hal_create_thread);
 
 EXPORT_SYMBOL(hal_add_funct_to_thread);
+EXPORT_SYMBOL(hal_init_funct_to_thread);
 EXPORT_SYMBOL(hal_del_funct_from_thread);
 
 EXPORT_SYMBOL(hal_start_threads);

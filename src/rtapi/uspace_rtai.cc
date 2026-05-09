@@ -182,6 +182,16 @@ struct RtaiApp : RtapiApp {
         return task->id;
     }
 
+    void task_self_resync() {
+        /* RTAI uspace stub: per-task period storage is not kept here. */
+        static int warned = 0;
+        if (!warned) {
+            rtapi_print_msg(RTAPI_MSG_WARN,
+                "RTAPI: rtapi_task_self_resync() is a no-op on the RTAI uspace backend\n");
+            warned = 1;
+        }
+    }
+
     static pthread_once_t key_once;
     static pthread_key_t key;
     static void init_key(void) {

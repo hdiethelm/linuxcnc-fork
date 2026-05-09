@@ -195,6 +195,16 @@ struct XenomaiApp : RtapiApp {
         return task->id;
     }
 
+    void task_self_resync() {
+        /* Xenomai uspace stub: not implemented. */
+        static int warned = 0;
+        if (!warned) {
+            rtapi_print_msg(RTAPI_MSG_WARN,
+                "RTAPI: rtapi_task_self_resync() is a no-op on the Xenomai uspace backend\n");
+            warned = 1;
+        }
+    }
+
     static pthread_once_t key_once;
     static pthread_key_t key;
     static void init_key(void) {

@@ -502,6 +502,18 @@ RTAPI_BEGIN_DECLS
  */
     extern int rtapi_task_self(void);
 
+/**
+ * @brief Re-anchor the periodic schedule of the calling task.
+ *
+ * Sets the task's next wakeup to one full period from now, discarding any
+ * accumulated lag. Used after a long one-shot init sequence so the catch-up
+ * loop in rtapi_wait() does not fire "unexpected realtime delay" warnings
+ * and the next cyclic pass starts on a clean period boundary.
+ * @note Call only from within the realtime task whose schedule is to be
+ *       re-anchored. No-op if the task is not periodic.
+ */
+    extern void rtapi_task_self_resync(void);
+
 #if defined(RTAPI_USPACE) || defined(USPACE)
 
 #define RTAPI_TASK_PLL_SUPPORT

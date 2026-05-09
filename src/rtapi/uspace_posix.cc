@@ -201,6 +201,16 @@ struct PosixApp : RtapiApp {
         return task->id;
     }
 
+    void task_self_resync() {
+        RtapiTask *task = reinterpret_cast<RtapiTask *>(pthread_getspecific(key));
+        if (!task)
+            return;
+        /* Set nextstart = now. The next rtapi_wait() advances it by
+           (period + pll_correction) and sleeps until then, giving exactly one
+           fresh period from this point. */
+        clock_gettime(CLOCK_MONOTONIC, &task->nextstart);
+    }
+
     bool do_thread_lock;
 
     static pthread_once_t key_once;

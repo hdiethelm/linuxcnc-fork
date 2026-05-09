@@ -918,6 +918,23 @@ int rtapi_task_pause(int task_id)
     return 0;
 }
 
+void rtapi_task_self_resync(void)
+{
+    /* RTAI backend stub: re-anchoring the period from inside an RTAI task
+       requires per-task period storage that is not currently kept. The
+       primary consumer (EtherCAT init via initf) runs on the uspace
+       backend. If RTAI support is needed, store period_counts per task in
+       rtapi_task_start() and call
+       rt_task_make_periodic(rt_whoami(), rt_get_time() + period_counts,
+                             period_counts) here. */
+    static int warned = 0;
+    if (!warned) {
+	rtapi_print_msg(RTAPI_MSG_WARN,
+	    "RTAPI: rtapi_task_self_resync() is a no-op on the RTAI backend\n");
+	warned = 1;
+    }
+}
+
 int rtapi_task_self(void)
 {
     RT_TASK *ptr;
@@ -1728,6 +1745,7 @@ EXPORT_SYMBOL(rtapi_wait);
 EXPORT_SYMBOL(rtapi_task_resume);
 EXPORT_SYMBOL(rtapi_task_pause);
 EXPORT_SYMBOL(rtapi_task_self);
+EXPORT_SYMBOL(rtapi_task_self_resync);
 EXPORT_SYMBOL(rtapi_shmem_new);
 EXPORT_SYMBOL(rtapi_shmem_delete);
 EXPORT_SYMBOL(rtapi_shmem_getptr);
