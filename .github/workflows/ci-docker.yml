@@ -13,6 +13,9 @@ on:
 permissions:
   contents: read #  to fetch code (actions/checkout)
 
+env:
+  DEBIAN_FRONTEND: noninteractive
+
 jobs:
 
   rip-and-test:
@@ -241,7 +244,7 @@ jobs:
     - name: Install debian packages
       run: |
         set -x
-        apt-get -y install ../*.deb --no-install-recommends
+        apt-get --yes --no-install-recommends install ../*.deb
     - name: Test debian packages
       run: |
         set -x
@@ -320,7 +323,7 @@ jobs:
     - name: Install debian packages
       run: |
         set -x
-        apt-get -y install ../*.deb --no-install-recommends
+        apt-get --yes --no-install-recommends install ../*.deb
     - name: Gather build artifacts
       run: |
         set -x
