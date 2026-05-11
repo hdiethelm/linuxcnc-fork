@@ -196,13 +196,13 @@ struct XenomaiApp : RtapiApp {
     }
 
     void task_self_resync() {
-        /* Xenomai uspace stub: not implemented. */
-        static int warned = 0;
-        if (!warned) {
-            rtapi_print_msg(RTAPI_MSG_WARN,
-                "RTAPI: rtapi_task_self_resync() is a no-op on the Xenomai uspace backend\n");
-            warned = 1;
-        }
+        RtapiTask *task = reinterpret_cast<RtapiTask *>(pthread_getspecific(key));
+        if (!task)
+            return;
+        /* Set nextstart = now. The next rtapi_wait() advances it by
+           (period + pll_correction) and sleeps until then, giving exactly one
+           fresh period from this point. */
+        clock_gettime(CLOCK_MONOTONIC, &task->nextstart);
     }
 
     static pthread_once_t key_once;
