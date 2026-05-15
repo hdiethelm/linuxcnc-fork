@@ -1,0 +1,86 @@
+component timetest "Test timebase functions";
+description """
+
+Test timebase functions
+
+Example:
+loadrt timetest
+loadrt threads name1=servo-thread period1=1000000
+addf timetest.0 servo-thread
+start
+
+""";
+pin out s32 time_get_time=0;
+pin out s32 time_get_clocks=0;
+pin out s32 max_time_get_time=0;
+pin out s32 max_time_get_clocks=0;
+pin out s32 delay_clocks=0;
+pin out s32 delay_time=0;
+pin out float delay_ratio=0;
+pin out float delay_ratio_lp=0;
+pin in s32 n_test=1000;
+pin in s32 t_delay=5000;
+pin in bit reset;
+function _;
+option extra_setup;
+
+license "GPL";
+author "H.Diethelm";
+;;
+
+#undef max
+#define max(a,b) ((a)>(b)?(a):(b))
+
+// Note: the extra setup is run _before_ the pins are created
+EXTRA_SETUP() {
+    (void)prefix;
+    (void)extra_arg;
+    (void)__comp_inst;
+    
+
+    return 0;
+}
+
+FUNCTION(_) {
+    (void)period;
+    long long int time_start;
+    long long int time_end;
+    int n_test_use = n_test;
+    
+    time_start = rtapi_get_time();
+    for(int i=0;i<n_test_use;i++){
+        rtapi_get_time();
+    }
+    time_end = rtapi_get_time();
+    time_get_time = (time_end - time_start)/n_test_use;
+
+    time_start = rtapi_get_time();
+    for(int i=0;i<n_test_use;i++){
+        rtapi_get_clocks();
+    }
+    time_end = rtapi_get_time();
+    time_get_clocks = (time_end - time_start)/n_test_use;
+
+    max_time_get_time = max(max_time_get_time, time_get_time);
+    max_time_get_clocks = max(max_time_get_clocks, time_get_clocks);
+    if(reset) {
+        max_time_get_time = 0;
+        max_time_get_clocks = 0;
+    }
+
+    long long int clock_start;
+    long long int clock_end;
+
+    time_start = rtapi_get_time();
+    clock_start = rtapi_get_clocks();
+    if(t_delay > 0){
+        rtapi_delay(t_delay);
+    }
+    time_end = rtapi_get_time();
+    clock_end = rtapi_get_clocks();
+
+    delay_time = time_end - time_start;
+    delay_clocks = clock_end - clock_start;
+    delay_ratio = (float)delay_clocks/(float)delay_time;
+    delay_ratio_lp = (100.0f*delay_ratio_lp + delay_ratio)/(100.0f+1.0f);
+}
