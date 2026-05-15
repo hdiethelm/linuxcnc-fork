@@ -390,8 +390,8 @@ struct hal_thread_t {
     long int period;		/* period of the thread, in nsec */
     int priority;		/* priority of the thread */
     int task_id;		/* ID of the task that runs this thread */
-    hal_s32_t* runtime;	/* (pin) duration of last run, in CPU cycles */
-    hal_s32_t maxtime;	/* (param) duration of longest run, in CPU cycles */
+    hal_s32_t* runtime;	/* (pin) duration of last run, in ns */
+    hal_s32_t maxtime;	/* (param) duration of longest run, in ns */
     hal_list_t funct_list;	/* list of functions to run */
     char name[HAL_NAME_LEN + 1];	/* thread name */
     int comp_id;
