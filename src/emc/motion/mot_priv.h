@@ -172,8 +172,7 @@ typedef struct {
     hal_float_t tc_acc[4];	/* RPA: traj internals, for debugging */
 
     // realtime overrun detection
-    hal_u32_t   *last_period;	/* pin: last period in clocks */
-    hal_float_t *last_period_ns;	/* pin: last period in nanoseconds */
+    hal_u32_t   *last_period;	/* pin: last period in nanoseconds */
 
     hal_float_t *tooloffset_x;
     hal_float_t *tooloffset_y;

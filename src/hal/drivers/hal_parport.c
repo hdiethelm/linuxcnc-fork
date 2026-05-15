@@ -359,15 +359,14 @@ static void read_port(void *arg, long period)
 
 static void reset_port(void *arg, long period) {
     parport_t *port = arg;
-    long long deadline, reset_time_tsc;
+    long long deadline;
     unsigned char outdata = (unsigned char)((port->outdata&~port->reset_mask) ^ port->reset_val);
    
     if(port->reset_time > period/4) port->reset_time = period/4;
-    reset_time_tsc = ns2tsc(port->reset_time);
 
     if(outdata != port->outdata) {
-        deadline = port->write_time + reset_time_tsc;
-        while(rtapi_get_clocks() < deadline) {}
+        deadline = port->write_time + port->reset_time;
+        while(rtapi_get_time() < deadline) {}
         rtapi_outb(outdata, port->base_addr);
         port->outdata = outdata;
     }
@@ -375,8 +374,8 @@ static void reset_port(void *arg, long period) {
     outdata = (unsigned char)((port->outdata_ctrl&~port->reset_mask_ctrl)^port->reset_val_ctrl);
 
     if(outdata != port->outdata_ctrl) {
-        deadline = port->write_time_ctrl + reset_time_tsc;
-        while(rtapi_get_clocks() < deadline) {}
+        deadline = port->write_time_ctrl + port->reset_time;
+        while(rtapi_get_time() < deadline) {}
 	/* correct for hardware inverters on pins 1, 14, & 17 */
         rtapi_outb(outdata ^ 0x0B, port->base_addr + 2);
         port->outdata_ctrl = outdata;
@@ -416,7 +415,7 @@ static void write_port(void *arg, long period)
 	{
 	    /* write it to the hardware */
 	    rtapi_outb(outdata, port->base_addr);
-	    port->write_time = rtapi_get_clocks();
+	    port->write_time = rtapi_get_time();
 	    port->outdata = outdata;
         }
 	port->reset_val = reset_val;
@@ -457,7 +456,7 @@ static void write_port(void *arg, long period)
         /* write it to the hardware */
         /* correct for hardware inverters on pins 1, 14, & 17 */
         rtapi_outb(outdata ^ 0x0B, port->base_addr + 2);
-        port->write_time_ctrl = rtapi_get_clocks();
+        port->write_time_ctrl = rtapi_get_time();
         port->outdata_ctrl = outdata;
     }
 }
