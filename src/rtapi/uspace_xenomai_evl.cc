@@ -102,6 +102,7 @@ struct XenomaiApp : RtapiApp {
             int tfd = evl_attach_self("linuxcnc-thread:%d", gettid());
             if (tfd < 0){
                 rtapi_print("evl_attach_self() failed ret %i errno %i\n", tfd, errno);
+                return nullptr;
             }
         }
 
