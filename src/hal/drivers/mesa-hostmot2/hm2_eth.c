@@ -46,6 +46,7 @@
 #include "hostmot2-lowlevel.h"
 #include "hostmot2.h"
 #include "hm2_eth.h"
+#include "hm2_eth_net.h"
 
 struct kvlist {
     struct rtapi_list_head list;
@@ -452,17 +453,11 @@ static const char *hm2_8cSS_pin_names[] = {
 
 };
 
-#define UDP_PORT 27181
-#define SEND_TIMEOUT_US 10
-#define RECV_TIMEOUT_US 10
 #define READ_PCK_DELAY_NS 10000
 
-static hm2_eth_t boards[MAX_ETH_BOARDS];
+static hm2_eth_t boards[MAX_ETH_BOARDS]={};
 
-/// ethernet io functions
-
-static int eth_socket_send(int sockfd, const void *buffer, int len, int flags);
-static int eth_socket_recv(int sockfd, void *buffer, int len, int flags);
+/// iptables functions
 
 // hm2_eth installs iptables/ip6tables rules to isolate the dedicated Mesa
 // interface from non-realtime traffic.  rtapi_app raises CAP_NET_ADMIN
@@ -519,7 +514,7 @@ static int run_iptables(const char *bin, int quiet, ...) {
 #define IP6T(quiet, ...) run_iptables(IP6TABLES_BIN, (quiet), __VA_ARGS__, NULL)
 
 static int iptables_state = -1;
-static bool use_iptables() {
+bool use_iptables() {
     if(iptables_state == -1) {
         if(no_iptables) {
             LL_PRINT("Skipping iptables setup (no_iptables=1); "
@@ -561,7 +556,7 @@ static bool use_iptables() {
     return iptables_state;
 }
 
-static void clear_iptables() {
+void clear_iptables() {
     IPT(1, "-F", CHAIN);
     IP6T(1, "-F", CHAIN);
 }
@@ -581,7 +576,7 @@ static char* inet_ntoa_buf(struct in_addr in, char *buf, size_t n) {
     return buf;
 }
 
-static char* fetch_ifname(int sockfd, char *buf, size_t n) {
+char* fetch_ifname(int sockfd, char *buf, size_t n) {
     struct sockaddr_in srcaddr;
     struct ifaddrs *ifa, *it;
 
@@ -608,7 +603,7 @@ static char* fetch_ifname(int sockfd, char *buf, size_t n) {
     return NULL;
 }
 
-static int install_iptables_board(int sockfd) {
+int install_iptables_board(int sockfd) {
     struct sockaddr_in srcaddr, dstaddr;
     char srchost[16], dsthost[16]; // enough for 255.255.255.255\0
     char dport_s[8], sport_s[8];
@@ -640,7 +635,7 @@ static int install_iptables_board(int sockfd) {
     return 0;
 }
 
-static int install_iptables_perinterface(const char *ifbuf) {
+int install_iptables_perinterface(const char *ifbuf) {
     // Without these rules, 'ping' spews a lot of "Packet filtered"
     // messages.  With them, ping prints 'ping: sendmsg: Operation not
     // permitted' once per second.
@@ -667,16 +662,16 @@ static int install_iptables_perinterface(const char *ifbuf) {
     return 0;
 }
 
-static int fetch_hwaddr(const char *board_ip, int sockfd, unsigned char buf[6]) {
+int fetch_hwaddr(hm2_eth_t *board, unsigned char buf[6]) {
     lbp16_cmd_addr packet;
     unsigned char response[6];
     LBP16_INIT_PACKET4(packet, 0x4983, 0x0002);
-    int res = eth_socket_send(sockfd, &packet, sizeof(packet), 0);
+    int res = eth_socket_send(board, &packet, sizeof(packet), 0);
     if(res < 0) return -errno;
 
     int i=0;
     do {
-        res = eth_socket_recv(sockfd, &response, sizeof(response), 0);
+        res = eth_socket_recv(board, &response, sizeof(response), 0);
     } while(++i < 10 && res < 0 && errno == EAGAIN);
     if(res < 0) return -errno;
 
@@ -684,136 +679,9 @@ static int fetch_hwaddr(const char *board_ip, int sockfd, unsigned char buf[6]) 
     for(i=0; i<6; i++) buf[i] = response[5-i];
 
     LL_PRINT("%s: INFO: Hardware address (MAC): %02x:%02x:%02x:%02x:%02x:%02x\n",
-        board_ip, buf[0], buf[1], buf[2], buf[3], buf[4], buf[5]);
+        board->ip, buf[0], buf[1], buf[2], buf[3], buf[4], buf[5]);
 
     return 0;
-}
-
-int ioctl_siocsarp(void *arg) {
-    hm2_eth_t *board = (hm2_eth_t *)arg;
-    return ioctl(board->sockfd, SIOCSARP, &board->req);
-}
-
-int ioctl_siocdarp(void *arg) {
-    hm2_eth_t *board = (hm2_eth_t *)arg;
-    return ioctl(board->sockfd, SIOCDARP, &board->req);
-}
-
-static int init_board(hm2_eth_t *board, const char *board_ip) {
-    int ret;
-
-    board->sockfd = socket(PF_INET, SOCK_DGRAM, IPPROTO_IP);
-    if (board->sockfd < 0) {
-        LL_PRINT("ERROR: can't open socket: %s\n", strerror(errno));
-        return -errno;
-    }
-    board->server_addr.sin_family = AF_INET;
-    board->server_addr.sin_port = htons(LBP16_UDP_PORT);
-    board->server_addr.sin_addr.s_addr = inet_addr(board_ip);
-
-    board->local_addr.sin_family      = AF_INET;
-    board->local_addr.sin_addr.s_addr = INADDR_ANY;
-
-    ret = connect(board->sockfd, (struct sockaddr *) &board->server_addr, sizeof(struct sockaddr_in));
-    if (ret < 0) {
-        LL_PRINT("ERROR: can't connect: %s\n", strerror(errno));
-        return -errno;
-    }
-
-    if(!use_iptables()) {
-        LL_PRINT(\
-"WARNING: Unable to restrict other access to the hm2-eth device.\n"
-"This means that other software using the same network interface can violate\n"
-"realtime guarantees.  See hm2_eth(9) for more information.\n");
-    }
-
-    struct timeval timeout;
-    timeout.tv_sec = 0;
-    timeout.tv_usec = RECV_TIMEOUT_US;
-
-    ret = setsockopt(board->sockfd, SOL_SOCKET, SO_RCVTIMEO, (char *)&timeout, sizeof(timeout));
-    if (ret < 0) {
-        LL_PRINT("ERROR: can't set receive timeout socket option: %s\n", strerror(errno));
-        return -errno;
-    }
-
-    timeout.tv_usec = SEND_TIMEOUT_US;
-    ret = setsockopt(board->sockfd, SOL_SOCKET, SO_SNDTIMEO, (char *)&timeout, sizeof(timeout));
-    if (ret < 0) {
-        LL_PRINT("ERROR: can't set send timeout socket option: %s\n", strerror(errno));
-        return -errno;
-    }
-
-    memset(&board->req, 0, sizeof(board->req));
-    struct sockaddr_in *sin;
-
-    sin = (struct sockaddr_in *) &board->req.arp_pa;
-    sin->sin_family = AF_INET;
-    sin->sin_addr.s_addr = inet_addr(board_ip);
-
-    board->req.arp_ha.sa_family = AF_LOCAL;
-    board->req.arp_flags = ATF_PERM | ATF_COM;
-    ret = fetch_hwaddr( board_ip, board->sockfd, (void*)&board->req.arp_ha.sa_data );
-    if(ret < 0) {
-        LL_PRINT("ERROR: Could not retrieve hardware address (MAC) of %s: %s\n", board_ip, strerror(-ret));
-        return ret;
-    }
-
-    ret = ioctl_siocsarp(board);
-    if(ret < 0) {
-        LL_PRINT("ERROR: ioctl SIOCSARP failed: %s\n", strerror(errno));
-        board->req.arp_flags &= ~ATF_PERM;
-        return -errno;
-    }
-
-    // install_iptables_board() is a no-op when iptables is unavailable
-    // (rootless install without setcap on hm2_eth_iptables, or
-    // no_iptables=1), so it is safe to call unconditionally.
-    ret = install_iptables_board(board->sockfd);
-    if(ret < 0) return ret;
-
-    board->write_packet_ptr = board->write_packet;
-    board->read_packet_ptr = board->read_packet;
-
-    return 0;
-}
-
-static int close_board(hm2_eth_t *board) {
-    int ret;
-    board->llio.reset(&board->llio);
-
-    if(use_iptables()) clear_iptables();
-
-    if(board->req.arp_flags & ATF_PERM) {
-        ret = ioctl_siocdarp(board);
-        if(ret < 0) perror("ioctl SIOCDARP");
-    }
-    ret = shutdown(board->sockfd, SHUT_RDWR);
-    if (ret == -1)
-        LL_PRINT("ERROR: can't shutdown socket: %s\n", strerror(errno));
-    
-    ret = close(board->sockfd);
-    if (ret == -1)
-        LL_PRINT("ERROR: can't close socket: %s\n", strerror(errno));
-    
-    return ret < 0 ? -errno : 0;
-}
-
-static int eth_socket_send(int sockfd, const void *buffer, int len, int flags) {
-    return send(sockfd, buffer, len, flags);
-}
-
-static int eth_socket_recv(int sockfd, void *buffer, int len, int flags) {
-    return recv(sockfd, buffer, len, flags);
-}
-
-static int eth_socket_recv_loop(int sockfd, void *buffer, int len, int flags, long timeout) {
-    long long end = rtapi_get_clocks() + timeout;
-    int result;
-    do {
-        result = eth_socket_recv(sockfd, buffer, len, flags);
-    } while(result < 0 && rtapi_get_clocks() < end);
-    return result;
 }
 
 /// hm2_eth io functions
@@ -841,7 +709,7 @@ static int hm2_eth_read(hm2_lowlevel_io_t *this, rtapi_u32 addr, void *buffer, i
 
     LBP16_INIT_PACKET4(read_packet, CMD_READ_HOSTMOT2_ADDR32_INCR(size/4), addr & 0xFFFF);
 
-    send = eth_socket_send(board->sockfd, (void*) &read_packet, sizeof(read_packet), 0);
+    send = eth_socket_send(board, (void*) &read_packet, sizeof(read_packet), 0);
     if(send < 0)
         LL_PRINT("ERROR: sending packet: %s\n", strerror(errno));
     LL_PRINT_IF(debug, "read(%d) : PACKET SENT [CMD:%02X%02X | ADDR: %02X%02X | SIZE: %d]\n", board->read_cnt, read_packet.cmd_hi, read_packet.cmd_lo,
@@ -849,7 +717,7 @@ static int hm2_eth_read(hm2_lowlevel_io_t *this, rtapi_u32 addr, void *buffer, i
     t1 = rtapi_get_time();
     do {
         errno = 0;
-        recv = eth_socket_recv(board->sockfd, (void*) &tmp_buffer, size, 0);
+        recv = eth_socket_recv(board, (void*) &tmp_buffer, size, 0);
         if(recv < 0) rtapi_delay(READ_PCK_DELAY_NS);
         t2 = rtapi_get_time();
         i++;
@@ -894,7 +762,7 @@ static int hm2_eth_send_queued_reads(hm2_lowlevel_io_t *this) {
     board->queue_reads_count++;
     board->queue_buff_size += 8;
 
-    send = eth_socket_send(board->sockfd, (void*) &board->read_packet, board->read_packet_ptr - board->read_packet, 0);
+    send = eth_socket_send(board, (void*) &board->read_packet, board->read_packet_ptr - board->read_packet, 0);
     if(send < 0) {
         LL_PRINT("ERROR: sending packet: %s\n", strerror(errno));
         return 0;
@@ -958,7 +826,7 @@ static int hm2_eth_receive_queued_reads(hm2_lowlevel_io_t *this) {
     do {
 do_recv_packet:
         errno = 0;
-        recv = eth_socket_recv(board->sockfd, (void*) &tmp_buffer, board->queue_buff_size, MSG_DONTWAIT);
+        recv = eth_socket_recv(board, (void*) &tmp_buffer, board->queue_buff_size, MSG_DONTWAIT);
         if(recv < 0) rtapi_delay(READ_PCK_DELAY_NS);
         t2 = rtapi_get_time();
         i++;
@@ -1003,7 +871,7 @@ static int hm2_eth_reset(hm2_lowlevel_io_t *this) {
     // Make the watchdog timer bite in 1ns from now
     lbp16_cmd_addr_data32 bite_packet;
     LBP16_INIT_PACKET8(bite_packet, CMD_WRITE_HOSTMOT2_ADDR32_INCR(1), HM2_ADDR_WATCHDOG, 0x0001);
-    int ret = eth_socket_send(board->sockfd, (void*) &bite_packet, sizeof(bite_packet), 0);
+    int ret = eth_socket_send(board, (void*) &bite_packet, sizeof(bite_packet), 0);
     if(ret < 0) perror("eth_socket_send(bite_packet)");
     return ret < 0 ? -errno : 0;
 }
@@ -1043,7 +911,7 @@ static int hm2_eth_write(hm2_lowlevel_io_t *this, rtapi_u32 addr, const void *bu
     memcpy(packet.tmp_buffer, buffer, size);
     LBP16_INIT_PACKET4(packet.wr_packet, CMD_WRITE_HOSTMOT2_ADDR32_INCR(size/4), addr & 0xFFFF);
 
-    send = eth_socket_send(board->sockfd, (void*) &packet, sizeof(lbp16_cmd_addr) + size, 0);
+    send = eth_socket_send(board, (void*) &packet, sizeof(lbp16_cmd_addr) + size, 0);
     if(send < 0)
         LL_PRINT("ERROR: sending packet: %s\n", strerror(errno));
     LL_PRINT_IF(debug, "write(%d): PACKET SENT [CMD:%02X%02X | ADDR: %02X%02X | SIZE: %d]\n", board->write_cnt, packet.wr_packet.cmd_hi, packet.wr_packet.cmd_lo,
@@ -1067,7 +935,7 @@ static int hm2_eth_send_queued_writes(hm2_lowlevel_io_t *this) {
     board->write_packet_size += (sizeof(*packet) + 4);
     
     t0 = rtapi_get_time();
-    send = eth_socket_send(board->sockfd, (void*) &board->write_packet, board->write_packet_size, 0);
+    send = eth_socket_send(board, (void*) &board->write_packet, board->write_packet_size, 0);
     if(send < 0) {
         LL_PRINT("ERROR: sending packet: %s\n", strerror(errno));
         return 0;
@@ -1119,12 +987,12 @@ static int hm2_eth_probe(hm2_eth_t *board) {
     char llio_name[16] = {};
 
     LBP16_INIT_PACKET4(read_packet, CMD_READ_BOARD_INFO_ADDR16_INCR(16/2), 0);
-    send = eth_socket_send(board->sockfd, (void*) &read_packet, sizeof(read_packet), 0);
+    send = eth_socket_send(board, (void*) &read_packet, sizeof(read_packet), 0);
     if(send < 0) {
         LL_PRINT("ERROR: sending packet: %s\n", strerror(errno));
         return -errno;
     }
-    recv = eth_socket_recv_loop(board->sockfd, (void*) &board_name, 16, 0,
+    recv = eth_socket_recv_loop(board, (void*) &board_name, 16, 0,
                 200 * 1000 * 1000);
     if(recv < 0) {
         LL_PRINT("ERROR: receiving packet: %s\n", strerror(errno));
@@ -1609,7 +1477,7 @@ int rtapi_app_main(void) {
 
     LL_PRINT("loading Mesa AnyIO HostMot2 ethernet driver version " HM2_ETH_VERSION "\n");
 
-    ret = hal_init(HM2_LLIO_NAME);
+    ret = hal_init(HM2_LLIO_MODULE_NAME);
     if (ret < 0)
         return ret;
     comp_id = ret;
@@ -1641,19 +1509,15 @@ int rtapi_app_main(void) {
     }
 
     for(i = 0; i<num_boards; i++) {
-        char ifbuf[64]; // more than enough for eth0
-        char *ifptr = fetch_ifname(boards[i].sockfd, ifbuf, sizeof(ifbuf));
-        if(!ifptr) {
-            LL_PRINT("failed to retrieve interface name for board");
-            continue;
-        } 
-        boards[i].read_cnt = boards[i].write_cnt = 0;
-        int *added = kvlist_lookup(&ifnames, ifptr);
+        int *added = kvlist_lookup(&ifnames, boards[i].ifname);
         if(!added)
             goto error;
         if(*added) continue;
-        install_iptables_perinterface(ifptr);
-        *added = 1;
+        install_iptables_perinterface(boards[i].ifname);
+    }
+
+    for(i = 0; i<num_boards; i++) {
+        init_board_realtime(&boards[i]);
     }
 
     hal_ready(comp_id);
