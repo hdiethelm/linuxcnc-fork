@@ -928,11 +928,7 @@ static void configure_memory() {
     free((void *)buf);
 }
 
-static int harden_rt() {
-    if (!rtapi_is_realtime())
-        return -EINVAL;
-
-    WITH_ROOT;
+static void harden_rt() {
 #if defined(__linux__) && (defined(__x86_64__) || defined(__i386__))
     if (iopl(3) < 0) {
         rtapi_print_msg(
@@ -1003,7 +999,6 @@ static int harden_rt() {
         // deliberately leak fd until program exit
     }
 #endif /* __linux__ */
-    return 0;
 }
 
 static RtapiApp *makeDllApp(const std::string &dllName, int policy) {
@@ -1096,10 +1091,11 @@ static RtapiApp *makeApp() {
         if (caps) cap_free(caps);
 #endif
     }
-    if (!rt_ok || harden_rt() < 0) {
+    if (!rt_ok) {
         app = makeDllApp("liblinuxcnc-uspace-posix.so.0", SCHED_OTHER);
     } else {
         WithRoot r;
+        harden_rt();
         if (detect_xenomai_evl()) {
             app = makeDllApp("liblinuxcnc-uspace-xenomai-evl.so.0", SCHED_FIFO);
         } else if (detect_xenomai()) {
