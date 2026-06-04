@@ -140,6 +140,7 @@ struct halcmd_command halcmd_commands[] = {
     {"delf",    FUNCT(do_delf_cmd, cp_cp),     A_TWO | A_OPTIONAL },
     {"delsig",  FUNCT(do_delsig_cmd, cp),      A_ONE },
     {"debug",   FUNCT(do_set_debug_cmd, cp),   A_ONE },
+    {"getrt",   FUNCT(do_getrt_cmd, v),        A_ZERO },
     {"echo",    FUNCT(do_echo_cmd, v),         A_ZERO },
     {"getp",    FUNCT(do_getp_cmd, cp),        A_ONE },
     {"gets",    FUNCT(do_gets_cmd, cp),        A_ONE },

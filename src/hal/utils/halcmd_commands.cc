@@ -255,6 +255,26 @@ int do_set_debug_cmd(char* level){
     return retval;
 }
 
+int do_getrt_cmd(void){
+    int m=0,retval=-EINVAL;
+    const char *argv[4];
+#if defined(RTAPI_USPACE)
+    argv[m++] = EMC2_BIN_DIR "/rtapi_app";
+    argv[m++] = "getrt";
+    argv[m++] = NULL;
+    retval = hal_systemv(argv);
+    if(retval){
+        halcmd_error("No realtime available\n");
+    }else{
+        halcmd_output("Realtime available\n");
+    }
+#else
+    halcmd_output("Realtime available, running in kernel\n");
+    retval = 0;
+#endif
+    return retval;
+}
+
 int do_source_cmd(char *hal_filename) {
     FILE *f = fopen(hal_filename, "r");
     char buf[MAX_CMD_LEN+1];

@@ -307,6 +307,16 @@ static int do_debug_cmd(const std::string &value) {
     }
 }
 
+static int do_getrt_cmd(void) {
+    try {
+        return rtapi_is_realtime() == 0;
+    } catch (std::invalid_argument &e) {
+        //stoi will throw an exception if parsing is not possible
+        rtapi_print_msg(RTAPI_MSG_ERR, "Debug level is not a number\n");
+        return -EINVAL;
+    }
+}
+
 /*
  * Fully checked send/recv
  * Will retry on EINTR, so to abort a send_data/recv_data on a
@@ -557,6 +567,8 @@ static int handle_command(const std::vector<std::string> &args) {
         return do_newinst_cmd(args[1], args[2], args[3]);
     } else if (args.size() == 2 && args[0] == "debug") {
         return do_debug_cmd(args[1]);
+    } else if (args.size() == 1 && args[0] == "getrt") {
+        return do_getrt_cmd();
     } else {
         rtapi_print_msg(RTAPI_MSG_ERR, "Unrecognized command starting with %s\n", args[0].c_str());
         return -1;
