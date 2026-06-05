@@ -932,6 +932,8 @@ obj-$(CONFIG_PID) += pid.o
 pid-objs := hal/components/pid.o $(MATHSTUB)
 obj-$(CONFIG_THREADS) += threads.o
 threads-objs := hal/components/threads.o $(MATHSTUB)
+obj-$(CONFIG_REALTIME) += realtime.o
+realtime-objs := hal/components/realtime.o $(MATHSTUB)
 obj-$(CONFIG_SUPPLY) += supply.o
 supply-objs := hal/components/supply.o $(MATHSTUB)
 obj-$(CONFIG_SIM_ENCODER) += sim_encoder.o
@@ -1345,6 +1347,7 @@ endif
 ../rtlib/siggen$(MODULE_EXT): $(addprefix objects/rt,$(siggen-objs))
 ../rtlib/pid$(MODULE_EXT): $(addprefix objects/rt,$(pid-objs))
 ../rtlib/threads$(MODULE_EXT): $(addprefix objects/rt,$(threads-objs))
+../rtlib/realtime$(MODULE_EXT): $(addprefix objects/rt,$(realtime-objs))
 ../rtlib/supply$(MODULE_EXT): $(addprefix objects/rt,$(supply-objs))
 ../rtlib/sim_encoder$(MODULE_EXT): $(addprefix objects/rt,$(sim_encoder-objs))
 ../rtlib/weighted_sum$(MODULE_EXT): $(addprefix objects/rt,$(weighted_sum-objs))
