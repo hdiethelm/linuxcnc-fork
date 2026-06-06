@@ -772,7 +772,10 @@ static int handle_command(const std::vector<std::string> &args) {
     if (args.size() == 0) {
         return 0;
     }
-    if (args.size() == 1 && args[0] == "exit") {
+    if (args.size() == 1 && args[0] == "start") {
+        rtapi_print_msg(RTAPI_MSG_ERR, "rtapi_app: start received while running\n");
+        return 0;
+    } else if (args.size() == 1 && args[0] == "exit") {
         force_exit = 1;
         return 0;
     } else if (args.size() >= 2 && args[0] == "load") {
@@ -790,7 +793,7 @@ static int handle_command(const std::vector<std::string> &args) {
     } else if (args.size() == 1 && args[0] == "check_rt") {
         return do_check_rt_cmd();
     } else {
-        rtapi_print_msg(RTAPI_MSG_ERR, "Unrecognized command starting with %s\n", args[0].c_str());
+        rtapi_print_msg(RTAPI_MSG_ERR, "rtapi_app: unrecognized command starting with %s\n", args[0].c_str());
         return -1;
     }
 }
@@ -849,12 +852,12 @@ static bool master_process_socket_command(int fd) {
         }
         close(fd1);
     }
-    return !force_exit && instance_count > 0;
+    return !force_exit;
 }
 
 static pthread_t main_thread{};
 
-static int master(int fd, const std::vector<std::string> &args) {
+static int master(int fd) {
     is_master = true;
     main_thread = pthread_self();
     int result;
@@ -864,18 +867,9 @@ static int master(int fd, const std::vector<std::string> &args) {
         return -1;
     }
     do_load_cmd("hal_lib", std::vector<std::string>());
-    instance_count = 0;
     App(); // force rtapi_app to be created
-    if (args.size()) {
-        result = handle_command(args);
-        if (result != 0)
-            goto out;
-        if (force_exit || instance_count == 0)
-            goto out;
-    }
     //Process commands as long as master should not exit
     while(master_process_socket_command(fd));
-out:
     do_unload_cmd("hal_lib");
     pthread_cancel(queue_thread);
     pthread_join(queue_thread, nullptr);
@@ -966,7 +960,6 @@ int main(int argc, char **argv) {
         args.push_back(std::string(argv[i]));
     }
 
-become_master:
     int fd = socket(PF_UNIX, SOCK_STREAM, 0);
     if (fd == -1) {
         perror("socket");
@@ -986,9 +979,9 @@ become_master:
     int result = bind(fd, (sockaddr *)&addr, sizeof(addr));
 
     if (result == 0) {
-        //If exit is called and master is not running, do not start master
-        //and exit again
+        //If exit is called and master is not running, just give a warning
         if (args.size() == 1 && args[0] == "exit") {
+            rtapi_print_msg(RTAPI_MSG_ERR, "rtapi_app: exit received while not running\n");
             return 0;
         }
         //If check_rt is called and master is not running, do not start master
@@ -999,14 +992,27 @@ become_master:
         if (args.size() == 1 && args[0] == "check_rt") {
             return do_check_rt_cmd();
         }
-        int result = listen(fd, 10);
-        if (result != 0) {
-            perror("listen");
-            exit(1);
+        //Start a master on start command
+        if (args.size() == 1 && args[0] == "start") {
+            int result = listen(fd, 10);
+            if (result != 0) {
+                perror("listen");
+                exit(1);
+            }
+            //Demonize
+            pid_t pid = fork();
+            if (pid < 0){
+                perror("fork");
+                exit(1);
+            }
+            if(pid == 0){
+                setsid(); // create a new session if we can...
+                result = master(fd);
+            }
+            return result;
         }
-        setsid(); // create a new session if we can...
-        result = master(fd, args);
-        return result;
+        fprintf(stderr, "error: No master found. Use realtime start to start one.\n");
+        exit(1);
     } else if (errno == EADDRINUSE) {
         struct timespec start, now;
         clock_gettime(CLOCK_MONOTONIC, &start);
@@ -1023,7 +1029,7 @@ become_master:
         if (result < 0 && errno == ECONNREFUSED) {
             fprintf(stderr, "Waited 3 seconds for master.  giving up.\n");
             close(fd);
-            goto become_master;
+            exit(1);
         }
         if (result < 0) {
             fprintf(stderr, "connect %s: %s", addr.sun_path, strerror(errno));
