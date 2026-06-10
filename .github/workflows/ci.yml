@@ -172,6 +172,41 @@ jobs:
         path: docs/build/html
         if-no-files-found: error
 
+  #This build step publishes a package as a container
+  #Thanks to https://www.kenmuse.com/blog/universal-packages-on-github-with-oras/
+  #Download the resulting package built for master using:
+  #oras pull ghcr.io/linuxcnc/linuxcnc/doc-html:master
+  htmldocs-package:
+    runs-on: ubuntu-24.04
+    needs: htmldocs
+    #Run on branch master / 2.9 or if the commit is tagged
+    if: github.ref_name == 'master' || github.ref_name == '2.9' || startsWith(github.ref, 'refs/tags/')
+    permissions:
+      packages: write # to create containers
+    steps:
+    - name: Dump GitHub context
+      env:
+        GITHUB_CONTEXT: ${{ toJson(github) }}
+      run: |
+        echo Number of CPUs: $(nproc)
+        echo "$GITHUB_CONTEXT"
+    - name: Download artifacts
+      uses: actions/download-artifact@v8
+      with:
+        name: linuxcnc-doc
+        path: html
+    - name: Use oras
+      uses: oras-project/setup-oras@v2
+      with:
+        version: 1.3.1
+    - name: Publish package
+      run: |
+        set -x
+        tar -czf doc-html.tar.gz html
+        TAG=${{github.ref_name}} #This is either the tag or branch name
+        echo ${{ secrets.GITHUB_TOKEN }} | oras login --username ${{ github.actor }} --password-stdin ghcr.io
+        oras push ghcr.io/${{ github.repository_owner }}/linuxcnc/doc-html:${TAG} --artifact-type application/vnd.pkgw doc-html.tar.gz
+
   package-arch:
     runs-on: ${{ matrix.runner }}
     strategy:
