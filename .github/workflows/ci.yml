@@ -58,10 +58,12 @@ jobs:
   #This build step publishes a package as a container
   #Thanks to https://www.kenmuse.com/blog/universal-packages-on-github-with-oras/
   #Download the resulting package built for master using:
-  #oras push ghcr.io/linuxcnc/linuxcnc/doc-html:master
+  #oras pull ghcr.io/linuxcnc/linuxcnc/doc-html:master
   htmldocs-package:
     runs-on: ubuntu-24.04
     needs: htmldocs
+    #Run on branch master / 2.9 or if the commit is tagged
+    if: github.ref_name == 'master' || github.ref_name == '2.9' || startsWith(github.ref, 'refs/tags/')
     permissions:
       packages: write # to create containers
     steps:
@@ -83,7 +85,6 @@ jobs:
     - name: Publish package
       run: |
         set -x
-        ls -l
         tar -czf doc-html.tar.gz html
         TAG=${{github.ref_name}} #This is either the tag or branch name
         echo ${{ secrets.GITHUB_TOKEN }} | oras login --username ${{ github.actor }} --password-stdin ghcr.io
