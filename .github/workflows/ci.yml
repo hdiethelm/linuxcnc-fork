@@ -172,6 +172,33 @@ jobs:
         path: docs/build/html
         if-no-files-found: error
 
+  htmldocs-package:
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+    - name: Dump GitHub context
+      env:
+        GITHUB_CONTEXT: ${{ toJson(github) }}
+      run: |
+        echo Number of CPUs: $(nproc)
+        echo "$GITHUB_CONTEXT"
+    - name: Download artifacts
+      uses: actions/download-artifact@v8
+      with:
+        name: linuxcnc-doc
+    - name: Use oras
+      uses: oras-project/setup-oras@v2
+      with:
+        version: 1.3.1
+    - name: Publish package
+      run: |
+        set -x
+        tar -czf doc.tar.gz html/
+        TAG=${{github.ref_name}}
+        echo ${{ secrets.GITHUB_TOKEN }} | oras login --username ${{ github.actor }} --password-stdin ghcr.io
+        oras push ghcr.io/${{ github.repository_owner }}/linuxcnc/doc:${TAG} --artifact-type application/vnd.pkgw doc.tar.gz
+
   package-arch:
     runs-on: ${{ matrix.runner }}
     strategy:
