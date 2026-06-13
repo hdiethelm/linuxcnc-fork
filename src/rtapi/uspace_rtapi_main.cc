@@ -260,13 +260,27 @@ rtapi_realtime_type_t rtapi_get_realtime_type(void){
         cached = REALTIME_TYPE_PREEMPT_RT;
         return cached;
     }
-    if(detect_preempt_dynamic()){
-        cached = REALTIME_TYPE_PREEMPT_DYNAMIC;
-        return cached;
-    }
 
-    rtapi_print_msg(RTAPI_MSG_ERR, "rtapi_get_realtime_type: Realtime type not detected\n");
-    cached = REALTIME_TYPE_PREEMPT_DYNAMIC;
+    if(detect_force()){
+        //Use REALTIME_TYPE_PREEMPT_DYNAMIC / REALTIME_TYPE_UNKNOWN only if forced
+        //This is not recommended
+        if(detect_preempt_dynamic()){
+            cached = REALTIME_TYPE_PREEMPT_DYNAMIC;
+        }else{
+            if(is_master){
+                rtapi_print_msg(RTAPI_MSG_ERR, "rtapi_get_realtime_type: Realtime type unknown but SCHED_FIFO available\n");
+            }
+            cached = REALTIME_TYPE_UNKNOWN;
+        }
+    }else{
+        if(is_master){
+            rtapi_print_msg(RTAPI_MSG_ERR,
+                "Note: realtime scheduling unavailable.\n"
+                "  Falling back to POSIX non-realtime.\n"
+                "  Override (testing only): set LINUXCNC_FORCE_REALTIME=1.\n");
+        }
+        cached = REALTIME_TYPE_NONE;
+    }
     return cached;
 }
 
