@@ -169,6 +169,7 @@ def testProgram(prog, pin, pos, offset, bpp, dpu, program, data):
 
 def main():
     try:
+        os.system(os.environ['REALTIME'] + " start");
         c = hal.component("test")
 
         pin = {
@@ -252,7 +253,7 @@ def main():
     finally:
         c.exit()
         prog.exit()
-        os.system('halrun -U')
+        os.system('halrun -U') #Calls also realtime stop
     return 0
 
 if __name__ == "__main__":
