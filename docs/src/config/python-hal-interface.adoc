@@ -82,8 +82,8 @@ a `RuntimeError` exception: `Cannot call before creating component`
 #The component will be cleaned up after comp goes out of scope
 #Use pid as component identifier, so it is unlikely to collide
 #with existing components
-comp_name = f"halpy{os.getpid()}"
 if not hal.is_initialized():
+    comp_name = f"halpy{os.getpid()}"
     comp = hal.component(comp_name)
 
 type = hal.get_realtime_type()

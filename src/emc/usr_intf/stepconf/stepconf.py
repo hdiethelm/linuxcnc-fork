@@ -893,7 +893,14 @@ class StepconfApp:
     def check_for_rt(self):
         is_realtime_capable = False
         try:
-            if not realtime.verify():
+            if not hal.is_initialized():
+                comp_name = f"halpy{os.getpid()}"
+                comp = hal.component(comp_name)
+            #Wait for rtapi_app to be running (Stupid, needs fix...)
+            time.sleep(1)
+            rt_type = hal.get_realtime_type()
+            print("hal.get_realtime_type() = " + str(rt_type))
+            if rt_type <= hal.REALTIME_TYPE_NONE
                 self.warning_dialog(self._p.MESS_NO_REALTIME,True)
             else:
                 if hal.is_kernelspace:
@@ -1410,7 +1417,6 @@ class StepconfApp:
 # Axis Test
 #***********
     def test_axis(self, axis):
-        if not self.check_for_rt(): return
         SIG = self._p
 
         vel = float(self.w[axis + "maxvel"].get_text())
@@ -1438,6 +1444,7 @@ class StepconfApp:
             period = 100000
 
         self.halrun = halrun = os.popen("halrun -Is", "w")
+        if not self.check_for_rt(): return
         if debug:
             halrun.write("echo\n")
         axnum = "xyza".index(axis)
