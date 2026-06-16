@@ -1,0 +1,39 @@
+#    Python wrapper of realtime script
+#    Copyright 2026 Hannes Diethelm <hannes.diethelm@gmail.com>
+#
+#    This program is free software; you can redistribute it and/or modify
+#    it under the terms of the GNU General Public License as published by
+#    the Free Software Foundation; either version 2 of the License, or
+#    (at your option) any later version.
+#
+#    This program is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#    GNU General Public License for more details.
+#
+#    You should have received a copy of the GNU General Public License
+#    along with this program; if not, write to the Free Software
+#    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+
+import os
+
+REALTIME="@REALTIME@"
+
+def verify():
+    #Checks if system is realtime compatible
+    cmd = REALTIME + " verify > /dev/null"
+    status = os.system(cmd)
+    exit_code = os.WEXITSTATUS(status)
+    if exit_code != 0 and exit_code != 1:
+        raise RuntimeError("cmd \"" + cmd + "\" failed with status " + str(status) + " exit_code " + str(exit_code))
+    return exit_code==0;
+
+def status():
+    #Status: realtime core running (rtapi_app running or kernel modules active)
+    #Note: rtapi_app running does not mean realtime compatibility!
+    cmd = REALTIME + " status > /dev/null"
+    status = os.system(cmd)
+    exit_code = os.WEXITSTATUS(status)
+    if exit_code != 0 and exit_code != 1:
+        raise RuntimeError("cmd \"" + cmd + "\" failed with status " + str(status) + " exit_code " + str(exit_code))
+    return exit_code==0;

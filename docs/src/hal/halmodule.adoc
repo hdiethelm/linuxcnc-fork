@@ -200,8 +200,7 @@ Use these to specify details rather then the value they hold.
 Read these to acquire information about the realtime system.
 
 * `is_kernelspace`
-* `is_rt`
-* `is_sim`
 * `is_userspace`
+* `get_realtime_type()`
 
 // vim: set syntax=asciidoc:
