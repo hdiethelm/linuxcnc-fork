@@ -185,13 +185,10 @@ jobs:
         tar -czf linuxcnc-doc.tar.gz -C docs/build html
     - name: Check HTML Links
       continue-on-error: true
-      run: |
-        #Note: -s disables remote link checks. This takes quite a long time but
-        #it should be done locally from time to time.
-        #Run after creating tar, so it can not change anything in the artifact
-        docker run -v $(pwd)/docs/build/html:/test --rm docker.io/wjdp/htmltest -s .
-        #remove tmp folder from htmltest
-        rm -r docs/build/html/tmp
+      uses: lycheeverse/lychee-action@v2
+      with:
+        fail: false
+        args: --exclude "(http|https|irc)://" docs/build/html
     - name: Upload linuxcnc-doc artifact
       uses: actions/upload-artifact@v7
       with:
