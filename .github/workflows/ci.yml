@@ -185,10 +185,10 @@ jobs:
         tar -czf linuxcnc-doc.tar.gz -C docs/build html
     - name: Check HTML Links
       continue-on-error: true
-      uses: lycheeverse/lychee-action@v2
-      with:
-        fail: false
-        args: --exclude "(http|https|irc)://" docs/build/html
+      run: |
+        set -x
+        #grep is used to filer out an error message due to a bug in checklink in ubuntu
+        checklink --recursive --exclude "(http|https|irc)://" --quiet --follow-file-links docs/build/html/index.html 2>&1 | grep -vE 'Use of uninitialized value .* at .*checklink line [0-9]+'
     - name: Upload linuxcnc-doc artifact
       uses: actions/upload-artifact@v7
       with:
