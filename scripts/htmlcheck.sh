@@ -1,16 +1,45 @@
 #!/bin/bash
 
+usage () {
+    P=${0##*/}
+    cat <<EOF
+$P: Run html checks
+
+Usage:
+    $P [-v] [-e] [file ...]
+    Run html checks
+
+    -v: Verbose
+    -e: Check external links
+EOF
+}
+
+VERBOSE=0
+EXTERNAL=0
+while getopts veh opt; do
+    case "$opt" in
+    v) VERBOSE=1 ;;
+    e) EXTERNAL=1 ;;
+    h|?) usage; exit 0 ;;
+    *) usage; exit 1 ;;
+    esac
+done
+shift $((OPTIND-1))
+
 if [ -z "$(which checklink)" ]; then
     echo "ERROR: checklink not found in PATH, install w3c-linkchecker for HTML link validation" 1>&2
-    echo "Can be downloaded from https://github.com/w3c/link-checker." 1>&2
-    echo "link-checker/bin/checklink is a perlscript, nothing else is needed." 1>&2
+    echo "Can be downloaded from https://github.com/w3c/link-checker if there is no package for your distribution." 1>&2
+    echo "link-checker/bin/checklink is a perl script, nothing else is needed." 1>&2
     exit 1
 fi
 
-# Do the rest from the docs directory
-cd "$(dirname "$0")/../docs" || { echo "Could not change directory to '$(dirname "$0")/../docs'"; exit 1; }
-
-CHKOPT=(--exclude "(http|https|irc)://" --quiet --follow-file-links)
+CHKOPT=( --follow-file-links )
+if [ "$VERBOSE" -eq 0 ]; then
+    CHKOPT+=( --quiet )
+fi
+if [ "$EXTERNAL" -eq 0 ]; then
+    CHKOPT+=( --exclude "(http|https|irc)://" )
+fi
 
 #Note: grep is used to filer out an error message due to a bug in checklink in debian/ubuntu
 #should be removed as soon as this package is fixed (upstream is already fine)
@@ -34,10 +63,11 @@ if [ $# -gt 0 ]; then
         fi
     done
 else
-    #Otherwhise, recursively check build/html/index.html
-    f="build/html/index.html"
+    #Otherwhise, recursively check docs/build/html/index.html
+    f="$(dirname "$0")/../docs/build/html/index.html"
     if [ -r "$f" ]; then
-        checklink --recursive "${CHKOPT[@]}" "$f" 2>&1 | grep -vE 'Use of uninitialized value .* at .*checklink line [0-9]+'
+        CHKOPT+=( --recursive )
+        checklink "${CHKOPT[@]}" "$f" 2>&1 | grep -vE 'Use of uninitialized value .* at .*checklink line [0-9]+'
         ret="${PIPESTATUS[0]}"
         if [ "$ret" -ne 0 ]; then
             echo "'$f': Recursive check: Fail"
