@@ -615,8 +615,8 @@ static ssize_t recv_data(int fd, void *buf, size_t n, int flags) {
  * Protocol:
  * 
  * client->master: std::vector<std::string> args
- * master processes the args and returns result
- * master->client: int result
+ * master processes the args and returns result and stdout string
+ * master->client: int result, std::string out
  *
  * Packing:
  * args are serialized as:
@@ -629,7 +629,10 @@ static ssize_t recv_data(int fd, void *buf, size_t n, int flags) {
  * }
  * 
  * result is serialized as:
- * int
+ * uint16_t size (full package size including the size field)
+ * int result
+ * uint16_t out_size
+ * char[out_size] out
  */
 
 static void push_uint16(std::vector<char> &buf, uint16_t value) {
@@ -659,9 +662,7 @@ static int get_int(const std::vector<char> &buf, size_t idx) {
 
 static bool send_result(int fd, int result, const std::string &out) {
     //Calculate size
-    size_t buff_size = 0;
-    buff_size += sizeof(int) + 2 * sizeof(uint16_t);
-    buff_size += out.size();
+    size_t buff_size = sizeof(uint16_t) + sizeof(int) + sizeof(uint16_t) + out.size();
 
     //Check uint16_t conversion of the total size; out.size() is bounded by it
     if (buff_size > std::numeric_limits<uint16_t>::max()) {
