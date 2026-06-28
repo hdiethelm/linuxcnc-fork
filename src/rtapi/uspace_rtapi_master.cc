@@ -630,27 +630,6 @@ static bool send_result(int fd, int result) {
     }
 }
 
-static bool recv_result(int fd, int *result) {
-    ssize_t res = recv_data(fd, result, sizeof(int), 0);
-    if (res != sizeof(int)) {
-        if (res == -1) {
-            rtapi_print_msg(RTAPI_MSG_ERR, "rtapi_app: recv_result failed: %s\n", strerror(errno));
-        } else {
-            rtapi_print_msg(
-                RTAPI_MSG_ERR, "rtapi_app: recv_result failed, recv only %li of %li bytes\n", res, sizeof(int)
-            );
-        }
-        return false;
-    } else {
-        return true;
-    }
-}
-
-static void push_uint16(std::vector<char> &buf, uint16_t value) {
-    buf.push_back((char)(0xff & (value >> 0)));
-    buf.push_back((char)(0xff & (value >> 8)));
-}
-
 static uint16_t get_uint16(const std::vector<char> &buf, size_t idx) {
     //at() will check index and throw std::out_of_range
     return ((uint16_t)(unsigned char)buf.at(idx)) | ((uint16_t)(unsigned char)buf.at(idx + 1) << 8);
@@ -716,58 +695,6 @@ static bool recv_args(int fd, std::vector<std::string> &args) {
     return true;
 }
 
-static bool send_args(int fd, const std::vector<std::string> &args) {
-    //Calculate size
-    size_t buff_size = 0;
-    buff_size += 2 * sizeof(uint16_t);
-    for (size_t i = 0; i < args.size(); i++) {
-        buff_size += sizeof(uint16_t);
-        buff_size += args[i].size();
-    }
-
-    //Check uint16_t conversions
-    //Buffer size is > sum(args[i].size()) so they don't need a separate check
-    if (buff_size > std::numeric_limits<uint16_t>::max()) {
-        rtapi_print_msg(RTAPI_MSG_ERR, "rtapi_app: send_args: args to big, size = %li!\n", buff_size);
-        return false;
-    }
-    //Edge case: One could in theory send many size zero args
-    if (args.size() > std::numeric_limits<uint16_t>::max()) {
-        rtapi_print_msg(RTAPI_MSG_ERR, "rtapi_app: send_args: arg count to big, size = %li!\n", args.size());
-        return false;
-    }
-
-    //Serialize
-    std::vector<char> buf;
-    buf.reserve(buff_size);
-    push_uint16(buf, (uint16_t)buff_size);
-    push_uint16(buf, (uint16_t)args.size());
-    for (size_t i = 0; i < args.size(); i++) {
-        push_uint16(buf, (uint16_t)args[i].size());
-        buf.insert(buf.end(), args[i].begin(), args[i].end());
-    }
-    if (buf.size() != buff_size) {
-        rtapi_print_msg(
-            RTAPI_MSG_ERR, "rtapi_app: Bug send_args: buf.size() %li != buff_size %li\n", buf.size(), buff_size
-        );
-        return false;
-    }
-
-    //Send
-    ssize_t res = send_data(fd, buf.data(), buf.size(), 0);
-    if (res != (ssize_t)buf.size()) {
-        if (res == -1) {
-            rtapi_print_msg(RTAPI_MSG_ERR, "rtapi_app: send_args failed: %s\n", strerror(errno));
-        } else {
-            rtapi_print_msg(
-                RTAPI_MSG_ERR, "rtapi_app: send_args failed, sent only %li of %li bytes\n", res, buf.size()
-            );
-        }
-        return false;
-    }
-    return true;
-}
-
 static int handle_command(const std::vector<std::string> &args) {
     if (args.size() == 0) {
         return 0;
@@ -793,23 +720,8 @@ static int handle_command(const std::vector<std::string> &args) {
     } else if (args.size() == 1 && args[0] == "check_rt") {
         return do_check_rt_cmd();
     } else {
-        rtapi_print_msg(RTAPI_MSG_ERR, "rtapi_app: unrecognized command starting with %s\n", args[0].c_str());
+        rtapi_print_msg(RTAPI_MSG_ERR, "rtapi_app: unrecognized command from client starting with %s\n", args[0].c_str());
         return -1;
-    }
-}
-
-static int slave(int fd, const std::vector<std::string> &args) {
-    if (!send_args(fd, args)) {
-        rtapi_print_msg(RTAPI_MSG_ERR, "rtapi_app: failed to write to master\n");
-        return -1;
-    }
-
-    int result = -1;
-    if (!recv_result(fd, &result)) {
-        rtapi_print_msg(RTAPI_MSG_ERR, "rtapi_app: failed to read from master\n");
-        return -1;
-    } else {
-        return result;
     }
 }
 
@@ -914,10 +826,6 @@ static bool get_fifo_path_to_addr(struct sockaddr_un *addr) {
     return true;
 }
 
-static double diff_timespec(const struct timespec *time1, const struct timespec *time0) {
-    return (double)(time1->tv_sec - time0->tv_sec) + (double)(time1->tv_nsec - time0->tv_nsec) / 1000000000.0;
-}
-
 #ifdef __linux__
 static void raise_net_admin_ambient(void);
 #endif
@@ -932,53 +840,6 @@ static int create_socket(){
     int enable = 1;
     setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &enable, sizeof(enable));
     return fd;
-}
-
-static int start_master(int fd){
-    int result = listen(fd, 10);
-    if (result != 0) {
-        perror("listen");
-        return 1;
-    }
-    //Demonize
-    pid_t pid = fork();
-    if (pid < 0){
-        perror("fork");
-        return 1;
-    }
-    if(pid == 0){
-        setsid(); // create a new session if we can...
-        result = master(fd);
-        exit(result);
-    }else{
-        return 0;
-    }
-}
-
-static int run_slave_cmd(struct sockaddr_un *addr, int fd, const std::vector<std::string> &args){
-    int result = -1;
-    struct timespec start, now;
-    clock_gettime(CLOCK_MONOTONIC, &start);
-    clock_gettime(CLOCK_MONOTONIC, &now);
-    srand48(start.tv_sec ^ start.tv_nsec);
-    while (diff_timespec(&now, &start) < 3.0) {
-        result = connect(fd, (sockaddr *)addr, sizeof(*addr));
-        if (result == 0)
-            break;
-
-        usleep((useconds_t)(lrand48() % 100000) + 100); //Random sleep min 100us max 100100us
-        clock_gettime(CLOCK_MONOTONIC, &now);
-    }
-    if (result < 0 && errno == ECONNREFUSED) {
-        fprintf(stderr, "Waited 3 seconds for master.  giving up.\n");
-        close(fd);
-        return 1;
-    }
-    if (result < 0) {
-        fprintf(stderr, "connect %s: %s", addr->sun_path, strerror(errno));
-        return 1;
-    }
-    return slave(fd, args);
 }
 
 int main(int argc, char **argv) {
@@ -1035,11 +896,6 @@ int main(int argc, char **argv) {
     int result = bind(fd, (sockaddr *)&addr, sizeof(addr));
 
     if (result == 0) {
-        //If exit is called and master is not running, just give a warning
-        if (args.size() == 1 && args[0] == "exit") {
-            rtapi_print_msg(RTAPI_MSG_ERR, "rtapi_app: exit received while not running\n");
-            return 0;
-        }
         //If check_rt is called and master is not running, do not start master
         //execute and return
         //This is needed for the verify command in the realtime script
@@ -1050,27 +906,31 @@ int main(int argc, char **argv) {
         }
         //Start a master on start command
         if (args.size() == 1 && args[0] == "start") {
-            result = start_master(fd);
-            exit(result);
-        }else{
-            fprintf(stderr, "WARNING: Deprecated: No master found. Use \"realtime start\" to start one.\n"
-                "  A master is started automatically.\n"
-                "  If this appears while using halcmd: Use halrun instead.\n"
-                "  halcmd should only be used with an already running realtime environment.\n"
-                "  halrun creates a realtime environment and tears it down at exit.\n");
-            result = start_master(fd);
+            int result = listen(fd, 10);
             if (result != 0) {
-                exit(result);
-            }
-            close(fd); //Need to close the socket, it is already bound and master is using it
-            int fd = create_socket();
-            if (fd < 0) {
+                perror("listen");
                 exit(1);
             }
-            return run_slave_cmd(&addr, fd, args);
+            //Demonize
+            pid_t pid = fork();
+            if (pid < 0){
+                perror("fork");
+                exit(1);
+            }
+            if(pid == 0){
+                setsid(); // create a new session if we can...
+                result = master(fd);
+            }
+            return result;
         }
+        if(args.size() > 0){
+            fprintf(stderr, "rtapi_master: unrecognized command starting with %s\n", args[0].c_str());
+        }else{
+            fprintf(stderr, "rtapi_master: no command\n");
+        }
+        exit(1);
     } else if (errno == EADDRINUSE) {
-        return run_slave_cmd(&addr, fd, args);
+        fprintf(stderr, "error: Master allready running. Use realtime stop to stop it.\n");
     } else {
         perror("bind");
         exit(1);

@@ -565,8 +565,8 @@ pycheck: pycheck-python-files pycheck-python-script
 # can be done about it)
 setuid:
 ifeq ($(BUILD_SYS),uspace)
-	chown root ../bin/rtapi_app
-	chmod 4750 ../bin/rtapi_app
+	chown root ../bin/rtapi_master
+	chmod 4750 ../bin/rtapi_master
 else
 	chown root ../bin/pci_write
 	chmod 4750 ../bin/pci_write
@@ -577,20 +577,20 @@ endif
 	chmod 4750 ../bin/linuxcnc_module_helper
 
 # File capabilities alternative to setuid (uspace only).
-# Grants rtapi_app the kernel privileges it needs without running as root:
+# Grants rtapi_master the kernel privileges it needs without running as root:
 #   cap_ipc_lock   - mlock() for realtime memory
 #   cap_net_admin  - raw socket access for hm2_eth / iptables management
 #   cap_sys_rawio  - iopl() and /dev/mem for parallel port and PCI I/O
 #   cap_sys_nice   - SCHED_FIFO scheduling and CPU affinity
 # Linux capabilities are not inherited across exec(), so /sbin/iptables
-# launched from rtapi_app would run unprivileged.  rtapi_app raises
+# launched from rtapi_master would run unprivileged.  rtapi_master raises
 # cap_net_admin into its ambient set at startup so it survives execve().
 # Clears any setuid bit left by a prior 'make setuid' so the two paths don't
 # silently stack.
 setcap:
 ifeq ($(BUILD_SYS),uspace)
-	chmod u-s ../bin/rtapi_app
-	setcap cap_ipc_lock,cap_net_admin,cap_sys_rawio,cap_sys_nice+ep ../bin/rtapi_app
+	chmod u-s ../bin/rtapi_master
+	setcap cap_ipc_lock,cap_net_admin,cap_sys_rawio,cap_sys_nice+ep ../bin/rtapi_master
 else
 	@echo "setcap target is only supported for uspace builds" >&2; exit 1
 endif

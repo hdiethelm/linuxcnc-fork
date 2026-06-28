@@ -244,7 +244,7 @@ int do_set_debug_cmd(char* level){
     int m=0,retval=-EINVAL;
     const char *argv[4];
 #if defined(RTAPI_USPACE)
-    argv[m++] = EMC2_BIN_DIR "/rtapi_app";
+    argv[m++] = EMC2_BIN_DIR "/rtapi_client";
     argv[m++] = "debug";
     argv[m++] = level;
     argv[m++] = NULL;
@@ -561,7 +561,7 @@ int do_newinst_cmd(char *comp_name, char *inst_name) {
     {
         char *argv[MAX_TOK];
         int m = 0, result;
-        argv[m++] = EMC2_BIN_DIR "/rtapi_app";
+        argv[m++] = EMC2_BIN_DIR "/rtapi_client";
         argv[m++] = "newinst";
         argv[m++] = comp_name;
         argv[m++] = inst_name;
@@ -1158,7 +1158,7 @@ int do_loadrt_cmd(char *mod_name, char *args[])
 #if defined(RTAPI_USPACE)
     argv[m++] = "-Wn";
     argv[m++] = mod_name;
-    argv[m++] = EMC2_BIN_DIR "/rtapi_app";
+    argv[m++] = EMC2_BIN_DIR "/rtapi_client";
     argv[m++] = "load";
     argv[m++] = mod_name;
     /* loop thru remaining arguments */
@@ -1434,7 +1434,7 @@ static int unloadrt_comp(char *mod_name)
     const char *argv[4];
 
 #if defined(RTAPI_USPACE)
-    argv[0] = EMC2_BIN_DIR "/rtapi_app";
+    argv[0] = EMC2_BIN_DIR "/rtapi_client";
     argv[1] = "unload";
 #else
     argv[0] = EMC2_BIN_DIR "/linuxcnc_module_helper";

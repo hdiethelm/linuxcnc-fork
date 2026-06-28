@@ -121,11 +121,11 @@ CheckConfig(){
 CheckStatus(){
     case $RTPREFIX in
     uspace)
-        if [ -z "$($PS -o stat= -o comm= -C rtapi_app | $GREP -v '^Z')" ]; then
-            echo rtapi_app is not running
+        if [ -z "$($PS -o stat= -o comm= -C rtapi_master | $GREP -v '^Z')" ]; then
+            echo rtapi_master is not running
             return 1
         else
-            echo rtapi_app is running
+            echo rtapi_master is running
             return 0
         fi ;;
     *)
@@ -172,7 +172,7 @@ Load(){
     CheckKernel
     case $RTPREFIX in
     uspace)
-        rtapi_app start
+        rtapi_master start
     ;;
     (*rtai*)
         for MOD in $MODULES_LOAD ; do
@@ -204,21 +204,21 @@ Unload(){
     CheckKernel
     case $RTPREFIX in
     uspace)
-        rtapi_app exit 
+        rtapi_client exit
 
-        # wait 5 seconds for rtapi_app to die and be reaped by its parent
+        # wait 5 seconds for rtapi_master to die and be reaped by its parent
         START=$SECONDS
         local NPROCS
         while [ 5 -gt $((SECONDS-START)) ]; do
-            NPROCS=$(ps -C rtapi_app -o stat= -o comm= | $GREP -v '^Z' | wc -l)
+            NPROCS=$(ps -C rtapi_master -o stat= -o comm= | $GREP -v '^Z' | wc -l)
             if [ "$NPROCS" -eq 0 ]; then
                 break
             fi
             sleep 0.1
         done
-        NPROCS=$(ps -C rtapi_app -o stat= -o comm= | $GREP -v '^Z' | wc -l)
+        NPROCS=$(ps -C rtapi_master -o stat= -o comm= | $GREP -v '^Z' | wc -l)
         if [ "$NPROCS" -gt 0 ]; then
-            echo "ERROR: rtapi_app failed to die" 1>&2
+            echo "ERROR: rtapi_master failed to die" 1>&2
         fi
 
         ipcrm -M 0x48414c32 2>/dev/null ;# HAL_KEY
@@ -234,7 +234,13 @@ Verify(){
     HAS_REALTIME=false
     case $RTPREFIX in
     uspace)
-        rtapi_app check_rt && HAS_REALTIME=true
+        if CheckStatus > /dev/null; then
+            #rtapi_master is running, use client
+            rtapi_client check_rt && HAS_REALTIME=true
+        else
+            #rtapi_master is not running, use master
+            rtapi_master check_rt && HAS_REALTIME=true
+        fi
     ;;
     (*rtai*)
         HAS_REALTIME=true
