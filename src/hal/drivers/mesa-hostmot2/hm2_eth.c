@@ -105,7 +105,7 @@ RTAPI_MP_INT(debug, "Developer/debug use only!  Enable debug logging.");
 
 static int boards_count = 0;
 
-int comm_active = 0;
+static int comm_active = 0;
 
 static int comp_id;
 
@@ -1548,6 +1548,15 @@ static int hm2_eth_items(hm2_eth_t *board) {
     return 0;
 }
 
+void init_board_realtime_all(void *arg, long period){
+    (void)arg;
+    (void)period;
+    int i;
+    for(i = 0; i < boards_count; i++) {
+        init_board_realtime(&boards[i]);
+    }
+}
+
 int rtapi_app_main(void) {
     RTAPI_INIT_LIST_HEAD(&ifnames);
     RTAPI_INIT_LIST_HEAD(&board_num);
@@ -1596,9 +1605,9 @@ int rtapi_app_main(void) {
         *added = 1;
     }
 
-    for(i = 0; i<num_boards; i++) {
-        init_board_realtime(&boards[i]);
-    }
+    char name[HAL_NAME_LEN + 1];
+    snprintf(name, HAL_NAME_LEN, "%s.realtime-init", HM2_LLIO_NAME);
+    hal_export_funct(name, init_board_realtime_all, 0, 0, 0, comp_id);
 
     hal_ready(comp_id);
 
