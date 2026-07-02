@@ -1738,7 +1738,7 @@ static void print_comp_info(char **patterns)
 
     if (scriptmode == 0) {
 	halcmd_output("Loaded HAL Components:\n");
-	halcmd_output("ID      Type  %-*s PID   State\n", HAL_NAME_LEN, "Name");
+	halcmd_output("ID      Type  %-*s PID    State ShmOff\n", HAL_NAME_LEN, "Name");
     }
     rtapi_mutex_get(&(hal_data->mutex));
     next = hal_data->comp_list_ptr;
@@ -1758,10 +1758,11 @@ static void print_comp_info(char **patterns)
                         halcmd_output(" %5d %s", comp->pid, comp->ready > 0 ?
                                 "ready" : "initializing");
                 } else {
-                        halcmd_output(" %5s %s", "", comp->ready > 0 ?
+                        halcmd_output(" %6s %s", "", comp->ready > 0 ?
                                 "ready" : "initializing");
                 }
             }
+            halcmd_output(" %7li ", next.getOff());
             halcmd_output("\n");
 	}
 	next = comp->next_ptr;
@@ -1780,7 +1781,7 @@ static void print_pin_info(int type, char **patterns)
 
     if (scriptmode == 0) {
 	halcmd_output("Component Pins:\n");
-	halcmd_output("Owner   Type  Dir                 Value  Name\n");
+	halcmd_output("Owner   Type  Dir                 Value  Name                                   Connection                  ShmOff   DataShmOff\n");
     }
     rtapi_mutex_get(&(hal_data->mutex));
     next = hal_data->pin_list_ptr;
@@ -1796,7 +1797,7 @@ static void print_pin_info(int type, char **patterns)
 		dptr = &(pin->dummysig);
 	    }
 	    if (scriptmode == 0) {
-		halcmd_output(" %5d  %5s %-3s  %9s  %s",
+		halcmd_output(" %5d  %5s %-3s  %9s  %-38s",
 		    comp->comp_id,
 		    data_type((int) pin->type),
 		    pin_data_dir((int) pin->dir),
@@ -1809,12 +1810,15 @@ static void print_pin_info(int type, char **patterns)
 		    pin_data_dir((int) pin->dir),
 		    data_value2((int) pin->type, dptr),
 		    pin->name);
-	    } 
-	    if (sig == NULL) {
-		halcmd_output("\n");
-	    } else {
-		halcmd_output(" %s %s\n", data_arrow1((int) pin->dir), sig->name);
 	    }
+	    if (sig == NULL) {
+		halcmd_output("%27s", "");
+	    } else {
+		halcmd_output(" %3s %-22s", data_arrow1((int) pin->dir), sig->name);
+	    }
+            halcmd_output(" %7li ", next.getOff());
+            halcmd_output(" %7li ", next->data_ptr_addr.getOff());
+            halcmd_output("\n");
 	}
 	next = pin->next_ptr;
     }
@@ -1865,15 +1869,18 @@ static void print_sig_info(int type, char **patterns)
 	return;
     }
     halcmd_output("Signals:\n");
-    halcmd_output("Type                  Value  Name     (linked to)\n");
+    halcmd_output("Type                  Value  Name                                    ShmOff   DataShmOff\n(linked to)\n");
     rtapi_mutex_get(&(hal_data->mutex));
     next = hal_data->sig_list_ptr;
     while (next != 0) {
 	sig = SHMPTR(next);
 	if ( tmatch(type, sig->type) && match(patterns, sig->name) ) {
 	    dptr = SHMPTR(sig->data_ptr);
-	    halcmd_output("%s  %s  %s\n", data_type((int) sig->type),
+	    halcmd_output("%s  %s  %-38s", data_type((int) sig->type),
 		data_value((int) sig->type, dptr), sig->name);
+            halcmd_output(" %7li ", next.getOff());
+            halcmd_output(" %7li ", next->data_ptr.getOff());
+            halcmd_output("\n");
 	    /* look for pin(s) linked to this signal */
 	    pin = halpr_find_pin_by_sig(sig, NULL);
 	    while (pin != NULL) {
@@ -1929,7 +1936,7 @@ static void print_param_info(int type, char **patterns)
 
     if (scriptmode == 0) {
 	halcmd_output("Parameters:\n");
-	halcmd_output("Owner   Type  Dir                 Value  Name\n");
+	halcmd_output("Owner   Type  Dir                 Value  Name                                    ShmOff   DataShmOff\n");
     }
     rtapi_mutex_get(&(hal_data->mutex));
     next = hal_data->param_list_ptr;
@@ -1938,18 +1945,21 @@ static void print_param_info(int type, char **patterns)
 	if ( tmatch(type, param->type), match(patterns, param->name) ) {
 	    comp = SHMPTR(param->owner_ptr);
 	    if (scriptmode == 0) {
-		halcmd_output(" %5d  %5s %-3s  %9s  %s\n",
+		halcmd_output(" %5d  %5s %-3s  %9s  %-38s",
 		    comp->comp_id, data_type((int) param->type),
 		    param_data_dir((int) param->dir),
 		    data_value((int) param->type, SHMPTR(param->data_ptr)),
 		    param->name);
 	    } else {
-		halcmd_output("%s %s %s %s %s\n",
+		halcmd_output("%s %s %s %s %s",
 		    comp->name, data_type((int) param->type),
 		    param_data_dir((int) param->dir),
 		    data_value2((int) param->type, SHMPTR(param->data_ptr)),
 		    param->name);
-	    } 
+	    }
+            halcmd_output(" %7li ", next.getOff());
+            halcmd_output(" %7li ", next->data_ptr.getOff());
+            halcmd_output("\n");
 	}
 	next = param->next_ptr;
     }

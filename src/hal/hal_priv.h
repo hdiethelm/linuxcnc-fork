@@ -163,6 +163,7 @@ public:
     T *operator ->() { return get(); }
     const T *operator ->() const { return get(); }
     operator bool() const { return off; }
+    rtapi_intptr_t getOff(){ return off;}
 private:
     rtapi_intptr_t off;
 };
