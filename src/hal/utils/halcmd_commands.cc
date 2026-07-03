@@ -1781,7 +1781,7 @@ static void print_pin_info(int type, char **patterns)
 
     if (scriptmode == 0) {
 	halcmd_output("Component Pins:\n");
-	halcmd_output("Owner   Type  Dir                 Value  Name                                   Connection                  ShmOff   DataShmOff\n");
+	halcmd_output("Owner   Type  Dir                 Value  Name                                   Connection                 ShmOff   PtrShmOff DataShmOff\n");
     }
     rtapi_mutex_get(&(hal_data->mutex));
     next = hal_data->pin_list_ptr;
@@ -1818,6 +1818,8 @@ static void print_pin_info(int type, char **patterns)
 	    }
             halcmd_output(" %7li ", next.getOff());
             halcmd_output(" %7li ", next->data_ptr_addr.getOff());
+            void ** data_ptr_addr = SHMPTR(pin->data_ptr_addr);
+            halcmd_output("  %7li ", (intptr_t)*data_ptr_addr - (intptr_t)comp->shmem_base);
             halcmd_output("\n");
 	}
 	next = pin->next_ptr;
@@ -1869,7 +1871,7 @@ static void print_sig_info(int type, char **patterns)
 	return;
     }
     halcmd_output("Signals:\n");
-    halcmd_output("Type                  Value  Name                                    ShmOff   DataShmOff\n(linked to)\n");
+    halcmd_output("Type                  Value  Name                                   ShmOff   DataShmOff\n(linked to)\n");
     rtapi_mutex_get(&(hal_data->mutex));
     next = hal_data->sig_list_ptr;
     while (next != 0) {
@@ -1936,7 +1938,7 @@ static void print_param_info(int type, char **patterns)
 
     if (scriptmode == 0) {
 	halcmd_output("Parameters:\n");
-	halcmd_output("Owner   Type  Dir                 Value  Name                                    ShmOff   DataShmOff\n");
+	halcmd_output("Owner   Type  Dir                 Value  Name                                   ShmOff   DataShmOff\n");
     }
     rtapi_mutex_get(&(hal_data->mutex));
     next = hal_data->param_list_ptr;
