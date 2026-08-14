@@ -1,4 +1,4 @@
-linuxcnc (1:2.9.10) UNRELEASED; urgency=medium
+linuxcnc (1:2.9.10) unstable; urgency=medium
 
   * Merge pull request #4219 from grandixximo/fix/4216-applied-tlo-params
   * tests: restore #5401-#5409 loaded-offset assertions
