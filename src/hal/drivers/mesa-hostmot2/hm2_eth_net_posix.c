@@ -179,12 +179,11 @@ int hm2_posix_eth_socket_recv(hm2_eth_t *board, void *buffer, int len, int recv_
 
     if (ret < 0) {
         LL_PRINT("ERROR: ppoll() failed: %m\n");
-    } else if(ret) {
-        ret = recv(board->sockfd, buffer, len, 0);
-    } else {
-        errno = EAGAIN;
-        ret = -1;
     }
+
+    //Read anyway with MSG_DONTWAIT, we might have
+    //got data
+    ret = recv(board->sockfd, buffer, len, MSG_DONTWAIT);
 
     return ret;
 }
