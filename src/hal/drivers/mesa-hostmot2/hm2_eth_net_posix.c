@@ -161,24 +161,20 @@ int hm2_posix_eth_socket_send(hm2_eth_t *board, const void *buffer, int len) {
 }
 
 int hm2_posix_eth_socket_recv(hm2_eth_t *board, void *buffer, int len, int recv_timeout_ns) {
-    struct pollfd pfd;
-    struct timespec ts;
+    fd_set rfds;
+    struct timeval tv;
     int ret;
 
     //SO_RCVTIMEO only delivers a timeout down to ~10ms
-    //while ppoll() works down to 100us
-    pfd.fd=board->sockfd;
-    pfd.events = POLLIN;
-    ts.tv_sec = 0;
-    ts.tv_nsec = recv_timeout_ns;
-    while (ts.tv_nsec >= 1e9) {
-        ts.tv_nsec -= 1e9;
-        ts.tv_sec ++;
-    }
-    ret = ppoll(&pfd, 1, &ts, NULL);
+    //while select() works down to 100us
+    FD_ZERO(&rfds);
+    FD_SET(board->sockfd, &rfds);
+    tv.tv_sec = 0;
+    tv.tv_usec = recv_timeout_ns/1000;
+    ret = select(board->sockfd+1, &rfds, NULL, NULL, &tv);
 
     if (ret < 0) {
-        LL_PRINT("ERROR: ppoll() failed: %m\n");
+        LL_PRINT("ERROR: select() failed: %m\n");
     } else if(ret) {
         ret = recv(board->sockfd, buffer, len, 0);
     } else {
