@@ -999,6 +999,7 @@ static void decrement_soft_error(hm2_eth_t *board) {
 }
 
 static int hm2_eth_receive_queued_reads(hm2_lowlevel_io_t *this) {
+    static int ctr=0;
     hm2_eth_t *board = this->private;
     int recv, i = 0;
     rtapi_u8 tmp_buffer[board->queue_buff_size];
@@ -1025,8 +1026,18 @@ static int hm2_eth_receive_queued_reads(hm2_lowlevel_io_t *this) {
     unsigned long long read_deadline = this->read_time + read_timeout;
 
 do_recv_packet:
-    recv = eth_socket_recv(board, (void*) &tmp_buffer, board->queue_buff_size, read_timeout);
-    t2 = rtapi_get_time();
+    if(ctr < 30000){
+        recv = eth_socket_recv(board, (void*) &tmp_buffer, board->queue_buff_size, read_timeout);
+        t2 = rtapi_get_time();
+        ctr++;
+    }else{
+        //Simulate a timeout
+        LL_PRINT("Dummy timeout\n");
+        ctr = 0;
+        t2 = this->read_time + read_timeout + 10000;
+        errno = EAGAIN;
+        recv = -1;
+    }
 
     if(recv != board->queue_buff_size) {
         LL_PRINT("receive_queued_reads: error (%m) after %llins timeout=%lins\n", t2 - t1, read_timeout);
