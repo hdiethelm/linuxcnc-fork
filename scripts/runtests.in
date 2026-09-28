@@ -215,7 +215,7 @@ run_one_test() {
             if ! grep --quiet --regexp "^#define HAVE_$prereq.*" "$TOPDIR/src/config.h" ; then
                 echo "Skipping test for missing prerequisite \"$prereq\": $testdir" 1>&2
                 SKIP=$((SKIP + 1))
-                continue 3
+                return 0
             fi
         done < "$testdir/musthave"
     fi
@@ -224,7 +224,7 @@ run_one_test() {
         if ! [ -x "$testdir/skip" ] || ! "$testdir/skip"; then
             echo "Skipping disabled test: $testdir" 1>&2
             SKIP=$((SKIP + 1))
-            continue
+            return 0
         fi
     fi
     if $NOSUDO && [ -e "$testdir/control" ] && \
@@ -232,7 +232,7 @@ run_one_test() {
         if ! [ -x "$testdir/skip" ] || ! "$testdir/skip"; then
             echo "Skipping sudo test: $testdir" 1>&2
             SKIP=$((SKIP + 1))
-            continue
+            return 0
         fi
     fi
     NUM=$((NUM + 1))
@@ -287,7 +287,7 @@ run_one_test() {
         FAIL=$((FAIL + 1))
         FAIL_NAMES="$FAIL_NAMES"$'\n'"$testdir"
         if test $STOP = 1; then
-            break
+            return 0
         fi
     else
         if [ $NOCLEAN -eq 0 ]; then
