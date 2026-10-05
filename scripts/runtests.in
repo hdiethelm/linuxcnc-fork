@@ -325,10 +325,11 @@ run_tests () {
         
         TMPDIR_PAR=$(mktemp -d /tmp/runtest-parallel.XXXXXX) #Save and sumarize results in $TMPDIR_PAR/testlog.txt which is bound from outside
 
-        CMD="echo job {%} {}; bwrap --dev-bind / / \
-        --overlay-src /tmp --tmp-overlay /tmp \
-        --overlay-src /var/tmp --tmp-overlay /var/tmp \
+        CMD="echo job {%} {}; bwrap --ro-bind / / --dev /dev \
+        --tmpfs /tmp \
+        --tmpfs /var/tmp \
         --overlay-src $HOME --tmp-overlay $HOME \
+        --overlay-src $TOPDIR --tmp-overlay $TOPDIR\
         --unshare-ipc --unshare-pid --unshare-net --proc /proc --die-with-parent -- scripts/runtests -p {}; echo done"
         echo "$CMD"
         parallel -j "$PARALLEL" "$CMD" < "$TMPDIR/alltests" 4> $TMPDIR_PAR/testlog.txt
