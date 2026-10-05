@@ -329,18 +329,18 @@ run_tests () {
         --tmpfs /tmp \
         --tmpfs /var/tmp \
         --overlay-src $HOME --tmp-overlay $HOME \
-        --overlay-src $TOPDIR --tmp-overlay $TOPDIR\
+        --overlay-src $TOPDIR --tmp-overlay $TOPDIR \
         --unshare-ipc --unshare-pid --unshare-net --proc /proc --die-with-parent -- scripts/runtests -p {}; echo done"
         echo "$CMD"
-        parallel -j "$PARALLEL" "$CMD" < "$TMPDIR/alltests" 4> $TMPDIR_PAR/testlog.txt
+        parallel -j "$PARALLEL" "$CMD" < "$TMPDIR/alltests" 4> "$TMPDIR_PAR/testlog.txt"
 
         #Quick and dirty sumary
-        ALL=$(cat $TMPDIR/alltests | wc -l)
-        NUM=$(cat $TMPDIR_PAR/testlog.txt | wc -l)
-        SHMERR=$(cat $TMPDIR_PAR/testlog.txt | grep SHMERR | wc -l)
-        SUCC=$(cat $TMPDIR_PAR/testlog.txt | grep SUCCESS | wc -l)
-        FAIL=$(cat $TMPDIR_PAR/testlog.txt | grep FAILED | wc -l)
-        SKIP=$(cat $TMPDIR_PAR/testlog.txt | grep SKIPPED | wc -l)
+        ALL=$(wc -l < "$TMPDIR/alltests")
+        NUM=$(wc -l < "$TMPDIR_PAR/testlog.txt")
+        SHMERR=$(grep -c SHMERR < "$TMPDIR_PAR/testlog.txt")
+        SUCC=$(grep -c SUCCESS < "$TMPDIR_PAR/testlog.txt")
+        FAIL=$(grep -c FAILED < "$TMPDIR_PAR/testlog.txt")
+        SKIP=$(grep -c SKIPPED < "$TMPDIR_PAR/testlog.txt")
 
         echo "Runtest Paralell: $ALL tests $NUM tests run, $SUCC successful, $FAIL failed, $SKIP skipped, $SHMERR shmem errors"
     else
