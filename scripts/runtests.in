@@ -327,6 +327,7 @@ run_tests () {
 
         CMD="echo job {%} {}; bwrap --dev-bind / / \
         --overlay-src /tmp --tmp-overlay /tmp \
+        --overlay-src /var/tmp --tmp-overlay /var/tmp \
         --overlay-src $HOME --tmp-overlay $HOME \
         --unshare-ipc --unshare-pid --unshare-net --proc /proc --die-with-parent -- scripts/runtests -p {}; echo done"
         echo "$CMD"
