@@ -325,16 +325,16 @@ run_tests () {
         
         TMPDIR_PAR=$(mktemp -d /tmp/runtest-parallel.XXXXXX) #Save and sumarize results in $TMPDIR_PAR/testlog.txt which is bound from outside
 
-        CMD="echo job {%} {}; bwrap --ro-bind / / --dev /dev \
+        CMD="bwrap --ro-bind / / --dev /dev \
         --tmpfs /tmp \
         --tmpfs /var/tmp \
-        --overlay-src $HOME --tmp-overlay $HOME \
-        --overlay-src $TOPDIR --tmp-overlay $TOPDIR \
-        --unshare-ipc --unshare-pid --unshare-net --proc /proc --die-with-parent -- scripts/runtests -p -w {}; echo done"
-        echo "$CMD"
+        --overlay-src \"$HOME\" --tmp-overlay \"$HOME\" \
+        --overlay-src \"$TOPDIR\" --tmp-overlay \"$TOPDIR\" \
+        --unshare-ipc --unshare-pid --unshare-net --proc /proc --die-with-parent -- scripts/runtests -p -w {}"
+
         parallel -j "$PARALLEL" "$CMD" < "$TMPDIR/alltests" 4> "$TMPDIR_PAR/testlog.txt"
 
-        #Quick and dirty sumary
+        #Create sumary based on testlog
         ALL=$(wc -l < "$TMPDIR/alltests")
         NUM=$(wc -l < "$TMPDIR_PAR/testlog.txt")
         SHMERR=$(grep -c SHMERR < "$TMPDIR_PAR/testlog.txt")
@@ -342,7 +342,9 @@ run_tests () {
         FAIL=$(grep -c FAILED < "$TMPDIR_PAR/testlog.txt")
         SKIP=$(grep -c SKIPPED < "$TMPDIR_PAR/testlog.txt")
 
-        echo "Runtest Paralell: $ALL tests $NUM tests run, $SUCC successful, $FAIL failed, $SKIP skipped, $SHMERR shmem errors"
+        echo "Runtest parallel: $ALL tests $NUM tests run, $SUCC successful, $FAIL failed, $SKIP skipped, $SHMERR shmem errors"
+
+        rm -rf "$TMPDIR_PAR"
     else
         while read -r testname; do
             run_one_test "$testname"
@@ -437,8 +439,6 @@ elif [ $WORKER -eq 1 ]; then
         exit 1;
     fi
     run_one_test "$1"
-    SUCC=$((NUM-FAIL))
-    echo "Runtest: $NUM tests run, $SUCC successful, $FAIL failed, $SKIP skipped, $SHMERR shmem errors"
     #FD 4 is used in parallel to log test results, so stdout / stderr / fd 3 used above don't interfere
     echo -n "$1" >&4
     if [ "$SHMERR" -ne 0 ]; then
