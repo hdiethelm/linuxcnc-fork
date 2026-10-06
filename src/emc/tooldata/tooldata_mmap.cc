@@ -197,7 +197,7 @@ int tool_mmap_user()
         ** continue execution if no mmap file is open.
         ** So print message and return fail indicator.
         */
-        fprintf(stderr,"tool_mmap_user(): tool mmap not available\n");
+        fprintf(stderr,"tool_mmap_user(): tool mmap not available, mmap %s failed\n", tool_mmap_fname());
         tool_mmap_base = (char*)NULL;
         return(-1);
     }
