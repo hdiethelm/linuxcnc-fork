@@ -319,17 +319,21 @@ run_tests () {
 	| sort > "$TMPDIR/alltests"
 
     if [ "$PARALLEL" -gt 0 ]; then
-        #Isolate: /tmp, $HOME, ipc, pid, net, proc
-        #Withouth $HOME isolation, some tests fail. There are probably some files there which are used by tests.
-        #linuxcnc source folder ($TOPDIR) isolation is not enought
-        
         TMPDIR_PAR=$(mktemp -d /tmp/runtest-parallel.XXXXXX) #Save and sumarize results in $TMPDIR_PAR/testlog.txt which is bound from outside
 
+        #ro-bind: / (root) so if any files are written at an unknown location, an error is generated
+        #dev: add device files
+        #tmpfs: /tmp /var/tmp (No files from host are needed there)
+        #tmp-overlay: /tmp, $HOME, $TOPDIR (Files from host are needed but writes are per instance and discarded)
+        #Withouth $HOME overlay, some tests fail. There are some files created and changed there.
+        #$TOPDIR/tests is bound, so the test results can be stored
+        #Isolate: ipc, pid, net, proc
         CMD="bwrap --ro-bind / / --dev /dev \
         --tmpfs /tmp \
         --tmpfs /var/tmp \
         --overlay-src \"$HOME\" --tmp-overlay \"$HOME\" \
         --overlay-src \"$TOPDIR\" --tmp-overlay \"$TOPDIR\" \
+        --bind \"$TOPDIR/tests\" \"$TOPDIR/tests\" \
         --unshare-ipc --unshare-pid --unshare-net --proc /proc --die-with-parent -- scripts/runtests "${WORKER_OPT[@]}" -w {}"
 
         parallel -j "$PARALLEL" "$CMD" < "$TMPDIR/alltests" 4> "$TMPDIR_PAR/testlog.txt"
