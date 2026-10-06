@@ -330,7 +330,7 @@ run_tests () {
         --tmpfs /var/tmp \
         --overlay-src \"$HOME\" --tmp-overlay \"$HOME\" \
         --overlay-src \"$TOPDIR\" --tmp-overlay \"$TOPDIR\" \
-        --unshare-ipc --unshare-pid --unshare-net --proc /proc --die-with-parent -- scripts/runtests -p -w {}"
+        --unshare-ipc --unshare-pid --unshare-net --proc /proc --die-with-parent -- scripts/runtests "${WORKER_OPT[@]}" -w {}"
 
         parallel -j "$PARALLEL" "$CMD" < "$TMPDIR/alltests" 4> "$TMPDIR_PAR/testlog.txt"
 
@@ -402,15 +402,16 @@ STOP=0
 PRINT=0
 PARALLEL=0
 WORKER=0
+WORKER_OPT=()
 while getopts cnuvsphdj:w opt; do
     case "$opt" in
-    c) CLEAN_ONLY=1 ;;
-    n) NOCLEAN=1 ;;
-    u) NOSUDO=true ;;
-    v) VERBOSE=1 ;;
-    s) STOP=1 ;;
-    p) PRINT=1 ;;
-    d) export ENABLE_CRASHDUMPS=1 ;;
+    c) CLEAN_ONLY=1; WORKER_OPT+=(-c) ;;
+    n) NOCLEAN=1 ; WORKER_OPT+=(-n) ;;
+    u) NOSUDO=true; WORKER_OPT+=(-u) ;;
+    v) VERBOSE=1; WORKER_OPT+=(-v) ;;
+    s) STOP=1; WORKER_OPT+=(-s) ;;
+    p) PRINT=1; WORKER_OPT+=(-p) ;;
+    d) export ENABLE_CRASHDUMPS=1; WORKER_OPT+="-d " ;;
     j) PARALLEL="$OPTARG" ;;
     w) WORKER=1 ;;
     h|?) usage; exit 0 ;;
