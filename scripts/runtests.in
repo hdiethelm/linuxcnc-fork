@@ -330,7 +330,7 @@ run_tests () {
         --tmpfs /var/tmp \
         --overlay-src $HOME --tmp-overlay $HOME \
         --overlay-src $TOPDIR --tmp-overlay $TOPDIR \
-        --unshare-ipc --unshare-pid --unshare-net --proc /proc --die-with-parent -- scripts/runtests -p {}; echo done"
+        --unshare-ipc --unshare-pid --unshare-net --proc /proc --die-with-parent -- scripts/runtests -p -w {}; echo done"
         echo "$CMD"
         parallel -j "$PARALLEL" "$CMD" < "$TMPDIR/alltests" 4> "$TMPDIR_PAR/testlog.txt"
 
@@ -386,6 +386,10 @@ Usage:
 
     $P -j jobs
         Run parallel jobs.
+
+    $P -w test-script
+        Worker mode, used to run parallel jobs. The test result is returned on file descriptor 4.
+        Do not use this mode except to test the worker mode. 4>&1 can be used to show the result.
 EOF
 }
 
@@ -395,7 +399,8 @@ NOSUDO=false
 STOP=0
 PRINT=0
 PARALLEL=0
-while getopts cnuvsphdj: opt; do
+WORKER=0
+while getopts cnuvsphdj:w opt; do
     case "$opt" in
     c) CLEAN_ONLY=1 ;;
     n) NOCLEAN=1 ;;
@@ -405,6 +410,7 @@ while getopts cnuvsphdj: opt; do
     p) PRINT=1 ;;
     d) export ENABLE_CRASHDUMPS=1 ;;
     j) PARALLEL="$OPTARG" ;;
+    w) WORKER=1 ;;
     h|?) usage; exit 0 ;;
     *) usage; exit 1 ;;
     esac
@@ -421,27 +427,33 @@ fi
 
 if [ $CLEAN_ONLY -eq 1 ]; then
     clean "$@"
-else
-    if [ "$#" -eq 1 ] && [ -f "$1" ]; then #Only one test with script as argument, assuming call from parallel
-        run_one_test "$1"
-        SUCC=$((NUM-FAIL))
-        echo "Runtest: $NUM tests run, $SUCC successful, $FAIL failed, $SKIP skipped, $SHMERR shmem errors"
-        #FD 4 is used in parallel to log test results, so stdout / stderr / fd 3 used above don't interfere
-        echo -n "$1" >&4
-        if [ "$SHMERR" -ne 0 ]; then
-            echo " SHMERR" >&4
-        fi
-        if [ "$FAIL" -ne 0 ]; then
-            echo " FAILED" >&4
-            exit 1;
-        elif [ "$SKIP" -ne 0 ]; then
-            echo " SKIPPED" >&4
-            exit 0;
-        else
-            echo " SUCCESS" >&4
-            exit 0;
-        fi
-    else
-        run_tests "$@"
+elif [ $WORKER -eq 1 ]; then 
+    if [ "$#" -ne 1 ] || [ ! -f "$1" ]; then
+        echo ERROR: worker mode expects one testfile as argument
+        exit 1;
     fi
+    if [ "$PARALLEL" -ne 0 ]; then
+        echo ERROR: worker mode does not take -j argument
+        exit 1;
+    fi
+    run_one_test "$1"
+    SUCC=$((NUM-FAIL))
+    echo "Runtest: $NUM tests run, $SUCC successful, $FAIL failed, $SKIP skipped, $SHMERR shmem errors"
+    #FD 4 is used in parallel to log test results, so stdout / stderr / fd 3 used above don't interfere
+    echo -n "$1" >&4
+    if [ "$SHMERR" -ne 0 ]; then
+        echo " SHMERR" >&4
+    fi
+    if [ "$FAIL" -ne 0 ]; then
+        echo " FAILED" >&4
+        exit 1;
+    elif [ "$SKIP" -ne 0 ]; then
+        echo " SKIPPED" >&4
+        exit 0;
+    else
+        echo " SUCCESS" >&4
+        exit 0;
+    fi
+else
+    run_tests "$@"
 fi
