@@ -204,7 +204,7 @@ test_and_remove_shmem() {
 }
 
 TMPDIR=$(mktemp -d /tmp/runtest.XXXXXX)
-trap 'rm -rf "$TMPDIR"' 0 1 2 3 15
+trap 'rm -rf "$TMPDIR" ; exit 1' 0 1 2 3 15
 
 
 run_tests () {
