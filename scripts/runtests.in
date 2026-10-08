@@ -318,11 +318,18 @@ run_tests () {
     if [ "$PARALLEL" -gt 0 ]; then
         TMPDIR_PAR=$(mktemp -d /tmp/runtest-parallel.XXXXXX) #Save and sumarize results in $TMPDIR_PAR/testlog.txt which is bound from outside
 
+        #convert relative to full path
+        while read -r testname; do
+            realpath -s "$testname" >> "$TMPDIR_PAR/alltests_realpath"
+        done < "$TMPDIR/alltests"
+
         #ro-bind: / (root) so if any files are written at an unknown location, an error is generated
         #dev: add device files
         #tmpfs: /tmp /var/tmp (No files from host are needed there)
         #tmp-overlay: $HOME, $TOPDIR (Files from host are needed but writes are per instance and discarded)
         #  Withouth $HOME overlay, some tests fail. There are some files created and changed there.
+        #overlay: Use overlays to gather the results in different folders
+        #  This needs the test path to be a full path
         #bind: $TOPDIR/tests (The test results are stored there and needed on the host)
         #  Could generate issues when multiple tests write the same result file
         #Isolate: ipc, pid, net, proc
@@ -333,24 +340,34 @@ run_tests () {
             "--tmpfs" "/var/tmp"
             "--overlay-src" "$HOME" "--tmp-overlay" "$HOME"
             "--overlay-src" "$TOPDIR" "--tmp-overlay" "$TOPDIR"
+            "--overlay-src" "{//}" "--overlay" "$TMPDIR_PAR/{//}" "$TMPDIR_PAR/wdir{#}" "{//}"
             "--unshare-ipc"
             "--unshare-pid"
             "--unshare-net"
             "--proc" "/proc"
             "--die-with-parent"
         )
-        CMD="bwrap ${BWRAPOPTS[*]} -- scripts/runtests ${WORKER_OPT[*]} -w {}"
-
-        parallel -j "$PARALLEL" "$CMD" < "$TMPDIR/alltests" 4> "$TMPDIR_PAR/testlog.txt"
+        CMD="mkdir -p $TMPDIR_PAR/{//} ; mkdir $TMPDIR_PAR/wdir{#} ; bwrap ${BWRAPOPTS[*]} -- scripts/runtests ${WORKER_OPT[*]} -w {}"
+        parallel -j "$PARALLEL" "$CMD" < "$TMPDIR_PAR/alltests_realpath" 4> "$TMPDIR_PAR/testlog.txt"
 
         #Create sumary based on testlog
-        ALL=$(wc -l < "$TMPDIR/alltests")
+        ALL=$(wc -l < "$TMPDIR_PAR/alltests_realpath")
         NUM=$(wc -l < "$TMPDIR_PAR/testlog.txt")
         SHMERR=$(grep -c SHMERR < "$TMPDIR_PAR/testlog.txt")
         SUCC=$(grep -c SUCCESS < "$TMPDIR_PAR/testlog.txt")
         FAIL=$(grep -c FAILED < "$TMPDIR_PAR/testlog.txt")
         FAIL_NAMES=$(grep FAILED < "$TMPDIR_PAR/testlog.txt" | sed 's/ FAILED$//')
         SKIP=$(grep -c SKIPPED < "$TMPDIR_PAR/testlog.txt")
+
+        #Copy results back from overlay RWSRC
+        if test $NOCLEAN = 1; then
+            while read -r testname; do
+                testdir=$(dirname "$testname")
+                cp -r "$TMPDIR_PAR/$testdir"/. "$testdir/"
+            done < "$TMPDIR_PAR/alltests_realpath"
+        fi
+
+        chmod -R u+rwx "$TMPDIR_PAR" #This is needed to delete the work directory's from overlayfs
         rm -rf "$TMPDIR_PAR"
 
         echo "Runtest parallel: $ALL tests $NUM tests run, $SUCC successful, $FAIL failed, $SKIP skipped, $SHMERR shmem errors"
