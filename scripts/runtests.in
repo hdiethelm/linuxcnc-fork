@@ -33,7 +33,6 @@ else
     export LIBDIR=@EMC2_HOME@/lib
     export LINUXCNC_EMCSH=@WISH@
     export REALTIME=@REALTIME@
-    export SUDO=sudo
 fi
 export PYTHON_CPPFLAGS="@PYTHON_CPPFLAGS@"
 export PYTHON_EXTRA_LIBS="@PYTHON_EXTRA_LIBS@"
@@ -229,14 +228,6 @@ run_one_test() {
             return 0
         fi
     fi
-    if $NOSUDO && [ -e "$testdir/control" ] && \
-            grep Restrictions: "$testdir/control" | grep -q sudo; then
-        if ! [ -x "$testdir/skip" ] || ! "$testdir/skip"; then
-            echo "Skipping sudo test: $testdir" 1>&2
-            SKIP=$((SKIP + 1))
-            return 0
-        fi
-    fi
     NUM=$((NUM + 1))
     TEST_DIR=$(readlink -f "$testdir")
     export TEST_DIR
@@ -423,10 +414,6 @@ Usage:
     $P -c tests
 	Remove temporary files from an earlier test run.
 
-    $P -u
-        Only run tests that require normal user access.  Skip tests
-        requiring root or sudo.
-
     $P -v
         Show stdout and stderr (normally it's hidden).
 
@@ -459,17 +446,15 @@ trap 'cleanup' 0
 
 CLEAN_ONLY=0
 NOCLEAN=0
-NOSUDO=false
 STOP=0
 PRINT=0
 PARALLEL=0
 WORKER=0
 WORKER_OPT=()
-while getopts cnuvsphdj:w opt; do
+while getopts cnvsphdj:w opt; do
     case "$opt" in
     c) CLEAN_ONLY=1;;
     n) NOCLEAN=1 ; WORKER_OPT+=(-n) ;;
-    u) NOSUDO=true; WORKER_OPT+=(-u) ;;
     v) VERBOSE=1; WORKER_OPT+=(-v) ;;
     s) STOP=1;;
     p) PRINT=1; WORKER_OPT+=(-p) ;;
