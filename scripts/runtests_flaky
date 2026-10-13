@@ -9,12 +9,12 @@ N=14
 time seq 0 $((N-1)) | parallel -j $N "echo Running {}; export RTAPI_CPU_NUMBER={%} ; echo taskset -c {%} scripts/runtests -p -j $JOBS 2> /dev/null"
 
 JOBS=32
-RUNS=32
+RUNS=128
 N=8
 M=4
-time seq $RUNS | parallel -j $N "echo Running {} {%} RT \$(($M*({%}-1))) taskset \$(($M*({%}-1)))-\$(($M*{%}-1)) ; export RTAPI_CPU_NUMBER=\$(($M*({%}-1))) ; taskset -c \$(($M*({%}-1)))-\$(($M*{%}-1)) scripts/runtests -p -j $JOBS 2> /dev/null"
+time seq $RUNS | parallel -j $N "echo Running {} {%} RT \$(($M*({%}-1))) taskset \$(($M*({%}-1)))-\$(($M*{%}-1)) ; export RTAPI_CPU_NUMBER=\$(($M*({%}-1))) ; taskset -c \$(($M*({%}-1)))-\$(($M*{%}-1)) scripts/runtests -p -j $JOBS 2> /dev/null" | tee tests_takset.txt
 
 JOBS=32
-RUNS=32
+RUNS=128
 N=8
-time seq $RUNS | parallel -j $N "SLEEP=\$(shuf -i 0-15 -n 1); echo Running {} sleep \$SLEEP ; sleep \$SLEEP ; scripts/runtests -p -j $JOBS 2> /dev/null"
+time seq $RUNS | parallel -j $N "SLEEP=\$(shuf -i 0-15 -n 1); echo Running {} sleep \$SLEEP ; sleep \$SLEEP ; scripts/runtests -p -j $JOBS 2> /dev/null" | tee tests_all_cpu.txt
