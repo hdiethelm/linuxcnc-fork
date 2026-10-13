@@ -8,7 +8,7 @@ TOPDIR=$(dirname "$HEADERS")
 # sp_scurve.c, motion globals). Only the tested functions are used here, so
 # build with function sections and let the linker garbage-collect the rest
 # instead of linking the whole trajectory planner.
-gcc -O2 -Wall -ffunction-sections -fdata-sections -DULAPI -DUNIT_TEST \
+gcc -O2 -Wall -ffunction-sections -fdata-sections -DRTAPI -DUNIT_TEST \
     -I"$HEADERS" -I"$TOPDIR/src" -I"$TOPDIR/src/emc" \
     -o test_blendmath test_blendmath.c "$TOPDIR/src/emc/tp/blendmath.c" \
     -L"$LIBDIR" -Wl,-rpath,"$LIBDIR" -Wl,--gc-sections -lposemath -lm
