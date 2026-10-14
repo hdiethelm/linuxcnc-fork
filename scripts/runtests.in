@@ -328,24 +328,14 @@ run_tests () {
             "--tmpfs" "/run"
             "--overlay-src" "$HOME" "--tmp-overlay" "$HOME"
             "--overlay-src" "$TOPDIR" "--tmp-overlay" "$TOPDIR"
-        )
-        if test $NOCLEAN = 1; then
-            BWRAPOPTS+=(
-                "--overlay-src" "{//}" "--overlay" "$TMPDIR/result_{#}" "$TMPDIR/work_{#}" "{//}"
-            )
-        fi
-        BWRAPOPTS+=(
+            "--overlay-src" "{//}" "--overlay" "$TMPDIR/result_{#}" "$TMPDIR/work_{#}" "{//}"
             "--unshare-ipc"
             "--unshare-pid"
             "--unshare-net"
             "--proc" "/proc"
             "--die-with-parent"
         )
-        if test $NOCLEAN = 1; then
-            CMD="mkdir $TMPDIR/result_{#} ; mkdir $TMPDIR/work_{#} ; bwrap ${BWRAPOPTS[*]} -- scripts/runtests ${WORKER_OPT[*]} -w {}"
-        else
-            CMD="bwrap ${BWRAPOPTS[*]} -- scripts/runtests ${WORKER_OPT[*]} -w {}"
-        fi
+        CMD="mkdir $TMPDIR/result_{#} ; mkdir $TMPDIR/work_{#} ; bwrap ${BWRAPOPTS[*]} -- scripts/runtests ${WORKER_OPT[*]} -w {}"
         parallel -j "$PARALLEL" "$CMD" < "$TMPDIR/alltests_realpath" 4> "$TMPDIR/testlog"
         RET_PARALLEL=$? #Will be nonzero if any command failed
 
@@ -359,27 +349,24 @@ run_tests () {
         NUM=$((SUCC + FAIL))
 
         #Copy results back from overlay RWSRC
-        if test $NOCLEAN = 1; then
-            i=1
-            while read -r testname; do
-                testdir=$(dirname "$testname")
-                cp -r "$TMPDIR/result_$i"/. "$testdir/"
+        i=1
+        while read -r testname; do
+            testdir=$(dirname "$testname")
+            cp -r "$TMPDIR/result_$i"/. "$testdir/"
 
-                #Cleanup whiteouts
-                #A whiteout is a character device with 0/0 device number
-                #marking a deleted file in the overlay
-                #See: https://docs.kernel.org/filesystems/overlayfs.html
-                #These can be safely deleted - this happens when a test run
-                #creates a file and the next test deletes it in the overlay.
-                #The following command does not check for id/number but
-                #no character devices are expected in tests directory
-                #expect the whiteouts
-                find "$testdir/" -type c -delete
+            #Cleanup whiteouts
+            #A whiteout is a character device with 0/0 device number
+            #marking a deleted file in the overlay
+            #See: https://docs.kernel.org/filesystems/overlayfs.html
+            #These can be safely deleted - this happens when a test run
+            #creates a file and the next test deletes it in the overlay.
+            #The following command does not check for id/number but
+            #no character devices are expected in tests directory
+            #expect the whiteouts
+            find "$testdir/" -type c -delete
 
-                ((i++))
-            done < "$TMPDIR/alltests_realpath"
-        fi
-
+            ((i++))
+        done < "$TMPDIR/alltests_realpath"
 
         echo "Runtest parallel: $NUM tests run, $SUCC successful, $FAIL failed, $SKIP skipped, $SHMERR shmem errors"
         #Check consistency
