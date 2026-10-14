@@ -352,7 +352,17 @@ run_tests () {
         i=1
         while read -r testname; do
             testdir=$(dirname "$testname")
-            cp -r "$TMPDIR/result_$i"/. "$testdir/"
+            if [ -n "$PARALLEL_OUTDIR" ]; then
+                #Assuming separator is last "tests", will break if tests has a subfolder tests
+                #testoutdir="$PARALLEL_OUTDIR"/"${testdir##*/tests/}"
+                #Assuming that tests are where there are suposed to be
+                #This will probably fail in some cases
+                testoutdir="$PARALLEL_OUTDIR"/"${testdir//$TOPDIR\/tests\//}"
+            else
+                testoutdir=$testdir
+            fi
+            mkdir -p "$testoutdir"
+            cp -r "$TMPDIR/result_$i"/. "$testoutdir/"
 
             #Cleanup whiteouts
             #A whiteout is a character device with 0/0 device number
@@ -363,7 +373,7 @@ run_tests () {
             #The following command does not check for id/number but
             #no character devices are expected in tests directory
             #expect the whiteouts
-            find "$testdir/" -type c -delete
+            find "$testoutdir/" -type c -delete
 
             ((i++))
         done < "$TMPDIR/alltests_realpath"
@@ -427,6 +437,9 @@ Usage:
         Needs -u if not in "run_in_place" mode. Tests calling
         sudo will fail.
 
+    $P -o outdir
+        With parallel jobs: Define where the test results will be redirected.
+
     $P -w test-script
         Worker mode, used to run parallel jobs. The test result is returned on file descriptor 4.
         Do not use this mode except to test the worker mode. 4>&1 can be used to show the result.
@@ -449,9 +462,10 @@ NOCLEAN=0
 STOP=0
 PRINT=0
 PARALLEL=0
+PARALLEL_OUTDIR=""
 WORKER=0
 WORKER_OPT=()
-while getopts cnvsphdj:w opt; do
+while getopts cnvsphdj:o:w opt; do
     case "$opt" in
     c) CLEAN_ONLY=1;;
     n) NOCLEAN=1 ; WORKER_OPT+=(-n) ;;
@@ -460,6 +474,7 @@ while getopts cnvsphdj:w opt; do
     p) PRINT=1; WORKER_OPT+=(-p) ;;
     d) export ENABLE_CRASHDUMPS=1; WORKER_OPT+=(-d) ;;
     j) PARALLEL="$OPTARG" ;;
+    o) PARALLEL_OUTDIR="$OPTARG" ;;
     w) WORKER=1 ;;
     h|?) usage; exit 0 ;;
     *) usage; exit 1 ;;
