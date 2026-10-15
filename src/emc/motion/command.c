@@ -430,8 +430,8 @@ void emcmotCommandHandler_locked(void *arg, long servo_period)
 
     if (emcmotCommand->commandNum != emcmotStatus->commandNumEcho) {
 	/* increment head count-- we'll be modifying emcmotStatus */
-	emcmotStatus->head++;
-	emcmotInternal->head++;
+	rtapi_seqlock_write_begin(&emcmotStatus->head);
+	rtapi_seqlock_write_begin(&emcmotInternal->head);
 
 	/* got a new command-- echo command and number... */
 	emcmotStatus->commandHeartbeat = emcmotStatus->heartbeat;
@@ -680,6 +680,7 @@ void emcmotCommandHandler_locked(void *arg, long servo_period)
 	       (motion_num_spindles)
 	    */
 	    rtapi_print_msg(RTAPI_MSG_DBG, "SET_NUM_SPINDLES");
+	    emcmot_config_change();
 	    rtapi_print_msg(RTAPI_MSG_DBG, " %d", emcmotCommand->spindle);
 	    if (   emcmotCommand->spindle > motion_num_spindles
 	        || emcmotCommand->spindle <= 0
@@ -2101,6 +2102,7 @@ void emcmotCommandHandler_locked(void *arg, long servo_period)
             break;
 
 	case EMCMOT_SELECT_KINS_TYPE:
+	    emcmot_config_change();
 	    emcmotConfig->switchkins_type = emcmotCommand->switchkins_type;
 	    emcmotConfig->switchkins_seq++;
 	    break;
@@ -2112,10 +2114,12 @@ void emcmotCommandHandler_locked(void *arg, long servo_period)
 	    break;
         case EMCMOT_SET_MAX_FEED_OVERRIDE:
             rtapi_print_msg(RTAPI_MSG_DBG, "SET_MAX_FEED_OVERRIDE");
+            emcmot_config_change();
             emcmotConfig->maxFeedScale = emcmotCommand->maxFeedScale;
             break;
         case EMCMOT_SETUP_ARC_BLENDS:
             rtapi_print_msg(RTAPI_MSG_DBG, "SETUP_ARC_BLENDS");
+            emcmot_config_change();
             emcmotConfig->arcBlendEnable = emcmotCommand->arcBlendEnable;
             emcmotConfig->arcBlendFallbackEnable = emcmotCommand->arcBlendFallbackEnable;
             emcmotConfig->arcBlendOptDepth = emcmotCommand->arcBlendOptDepth;
@@ -2125,6 +2129,7 @@ void emcmotCommandHandler_locked(void *arg, long servo_period)
             break;
         case EMCMOT_SET_PROBE_ERR_INHIBIT:
             rtapi_print_msg(RTAPI_MSG_DBG, "SET_PROBE_ERR_INHIBIT");
+            emcmot_config_change();
             emcmotConfig->inhibit_probe_jog_error = emcmotCommand->probe_jog_err_inhibit;
             emcmotConfig->inhibit_probe_home_error = emcmotCommand->probe_home_err_inhibit;
             break;
@@ -2136,9 +2141,9 @@ void emcmotCommandHandler_locked(void *arg, long servo_period)
 	}
 	rtapi_print_msg(RTAPI_MSG_DBG, "\n");
 	/* synch tail count */
-	emcmotStatus->tail = emcmotStatus->head;
-	emcmotConfig->tail = emcmotConfig->head;
-	emcmotInternal->tail = emcmotInternal->head;
+	rtapi_seqlock_write_end(&emcmotStatus->tail, &emcmotStatus->head);
+	rtapi_seqlock_write_end(&emcmotConfig->tail, &emcmotConfig->head);
+	rtapi_seqlock_write_end(&emcmotInternal->tail, &emcmotInternal->head);
 
     }
     /* end of: if-new-command */
