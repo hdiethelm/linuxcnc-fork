@@ -182,13 +182,14 @@ test_shmem() {
 }
 
 test_and_remove_shmem() {
+    testdir=$1
     ret=0
     for i in "${!SHMEM_KEY[@]}"; do
         # ipcs returns the following columns:
         #   key shmid owner perms bytes nattch status
         read -r -a SHM < <(ipcs -m | grep -Ei "^\\s*${SHMEM_KEY[$i]}")
         if [ "${#SHM[@]}" -ge 6 ]; then
-            echo "*** SHMERR: Shared memory segment ${SHMEM_KEY[$i]} (${SHMEM_USE[$i]} key) was not removed. Removing..."
+            echo "$testdir: *** SHMERR: Shared memory segment ${SHMEM_KEY[$i]} (${SHMEM_USE[$i]} key) was not removed. Removing..."
             ipcrm -M "${SHMEM_KEY[$i]}"
             # Check number of attached processes. It should be zero.
             if [ "${SHM[5]}" -ne 0 ]; then
@@ -289,7 +290,7 @@ run_one_test() {
         fi
     fi
 
-    if ! test_and_remove_shmem; then
+    if ! test_and_remove_shmem "$testdir"; then
         if [ $? -eq 2 ]; then
             # Cannot remove attached segments. Fail hard.
             exit 1
