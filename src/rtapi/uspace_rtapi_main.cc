@@ -57,6 +57,7 @@
 
 #include <rtapi.h>
 #include "uspace_common.h"
+#include "spdlog/spdlog.h"
 
 static RtapiApp &App();
 
@@ -412,7 +413,28 @@ static void *queue_function(void * /*arg*/) {
         pthread_testcancel();
         pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, nullptr);
         rtapi_msg_queue.consume_all([](const message_t &m) {
-            fputs(m.msg, m.level == RTAPI_MSG_ALL ? stdout : stderr);
+            if(m.level == RTAPI_MSG_ALL) {
+                fputs(m.msg, stderr);
+            } else {
+                switch (m.level) {
+                case RTAPI_MSG_ALL:
+                    break;
+                case RTAPI_MSG_ERR:
+                    spdlog::error(m.msg);
+                    break;
+                case RTAPI_MSG_WARN:
+                    spdlog::warn(m.msg);
+                    break;
+                case RTAPI_MSG_INFO:
+                    spdlog::info(m.msg);
+                    break;
+                case RTAPI_MSG_DBG:
+                    spdlog::debug(m.msg);
+                    break;
+                case RTAPI_MSG_NONE:
+                    break;
+                }
+            }
         });
         pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, nullptr);
         struct timespec ts = {0, 10000000};
@@ -1710,7 +1732,31 @@ void default_rtapi_msg_handler(msg_level_t level, const char *fmt, va_list ap) {
         vsnprintf(m.msg, sizeof(m.msg), fmt, ap);
         rtapi_msg_queue.push(m);
     } else {
-        vfprintf(level == RTAPI_MSG_ALL ? stdout : stderr, fmt, ap);
+        if(level == RTAPI_MSG_ALL) {
+            vfprintf(stdout, fmt, ap);
+            fflush(stdout);
+        } else {
+            char buf[1024];
+            vsnprintf(buf, sizeof(buf), fmt, ap);
+            switch (level) {
+            case RTAPI_MSG_ALL:
+                break;
+            case RTAPI_MSG_ERR:
+                spdlog::error(buf);
+                break;
+            case RTAPI_MSG_WARN:
+                spdlog::warn(buf);
+                break;
+            case RTAPI_MSG_INFO:
+                spdlog::info(buf);
+                break;
+            case RTAPI_MSG_DBG:
+                spdlog::debug(buf);
+                break;
+            case RTAPI_MSG_NONE:
+                break;
+            }
+        }
     }
 }
 

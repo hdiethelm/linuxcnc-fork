@@ -12,8 +12,6 @@
 * Last change:
 ********************************************************************/
 
-#define _GNU_SOURCE
-
 #include <stddef.h>		/* NULL */
 #include <stdio.h>		/* printf */
 #include <stdlib.h>		/* malloc(), free() */
@@ -23,6 +21,7 @@
 #include <rtapi.h>
 #include <unistd.h>
 #include "rtapi/uspace_common.h"
+#include "spdlog/spdlog.h"
 
 
 /* FIXME - no support for fifos */
@@ -76,10 +75,28 @@ void rtapi_delay(long ns) {
 
 void default_rtapi_msg_handler(msg_level_t level, const char *fmt, va_list ap) {
     if(level == RTAPI_MSG_ALL) {
-	vfprintf(stdout, fmt, ap);
+        vfprintf(stdout, fmt, ap);
         fflush(stdout);
     } else {
-	vfprintf(stderr, fmt, ap);
-        fflush(stderr);
+        char buf[1024];
+        vsnprintf(buf, sizeof(buf), fmt, ap);
+        switch (level) {
+        case RTAPI_MSG_ALL:
+            break;
+        case RTAPI_MSG_ERR:
+            spdlog::error(buf);
+            break;
+        case RTAPI_MSG_WARN:
+            spdlog::warn(buf);
+            break;
+        case RTAPI_MSG_INFO:
+            spdlog::info(buf);
+            break;
+        case RTAPI_MSG_DBG:
+            spdlog::debug(buf);
+            break;
+        case RTAPI_MSG_NONE:
+            break;
+        }
     }
 }

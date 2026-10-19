@@ -208,7 +208,7 @@ SUBDIRS := \
 
 
 
-ULAPISRCS := rtapi/$(RTPREFIX)_ulapi.c
+ULAPISRCS := rtapi/$(RTPREFIX)_ulapi.cc
 
 # Each item in INCLUDES is transformed into a -I directive later on
 # The top directory is always included
