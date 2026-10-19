@@ -22,6 +22,7 @@
 #include <fmt/format.h>
 
 #include "nml_intf/emcglb.h"	// emc_debug
+#include "spdlog/spdlog.h"
 
 namespace linuxcnc {
 
@@ -29,14 +30,14 @@ namespace linuxcnc {
 template <typename... T>
 void log_error(fmt::format_string<T...> f, T &&...args)
 {
-    fmt::print(stderr, f, std::forward<T>(args)...);
+    spdlog::error(f, std::forward<T>(args)...);
 }
 
 /// An informational message, on stdout. Was rcs_print().
 template <typename... T>
 void log_info(fmt::format_string<T...> f, T &&...args)
 {
-    fmt::print(f, std::forward<T>(args)...);
+    spdlog::info(f, std::forward<T>(args)...);
 }
 
 /// A debug message, on stdout, printed only when any of the EMC_DEBUG_*
@@ -46,7 +47,7 @@ template <typename... T>
 void log_debug(unsigned flags, fmt::format_string<T...> f, T &&...args)
 {
     if (emc_debug & flags) {
-        fmt::print(f, std::forward<T>(args)...);
+        spdlog::debug(f, std::forward<T>(args)...);
     }
 }
 
