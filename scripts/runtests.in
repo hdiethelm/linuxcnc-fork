@@ -337,7 +337,7 @@ run_tests () {
             "--proc" "/proc"
             "--die-with-parent"
         )
-        CMD="mkdir $TMPDIR/result_{#} ; mkdir $TMPDIR/work_{#} ; bwrap ${BWRAPOPTS[*]} -- ${RUNTESTS} ${WORKER_OPT[*]} -w {}"
+        CMD="mkdir $TMPDIR/result_{#} ; mkdir $TMPDIR/work_{#} ; bwrap ${BWRAPOPTS[*]} -- ${RUNTESTS} ${WORKER_OPT[*]} -w {} 4> $TMPDIR/testlog_{#}"
 
         # Disable rtapi_app CPU assignment to an isolated CPU if not explicitly set
         # Otherwise this results in all rtapi_app processes running on the same CPU
@@ -347,8 +347,11 @@ run_tests () {
 
         POPTS=("-j" "$PARALLEL")
         [ "$STOP" -ne 0 ] && POPTS+=("--halt" "soon,fail=1")
-        parallel "${POPTS[@]}" "$CMD" < "$TMPDIR/alltests_realpath" 4> "$TMPDIR/testlog"
+        parallel "${POPTS[@]}" "$CMD" < "$TMPDIR/alltests_realpath"
         RET_PARALLEL=$? # Will be nonzero if any command failed
+
+        # Gather all testlog files to a single testlog
+        cat "$TMPDIR"/testlog_* > "$TMPDIR/testlog"
 
         # Create summary based on testlog
         ALL=$(wc -l < "$TMPDIR/alltests")
