@@ -5,8 +5,7 @@
 = Latency Tuning
 
 LinuxCNC can run on many different hardware platforms and with many
-different realtime kernels, and they all may benefit from tuning for
-optimal latency.
+different realtime kernels. They all will benefit from tuning for optimal latency.
 
 A primary goal in tuning the system for LinuxCNC is to reserve a CPU for
 the exclusive use of LinuxCNC's realtime tasks, so that other tasks
@@ -67,6 +66,7 @@ jitter while LinuxCNC is running. It should be added as the first function.
 
 For servo-thread only:
 
+[source,hal]
 ----
 loadrt timedelta count=1
 ...
@@ -75,6 +75,7 @@ addf timedelta.0 servo-thread
 
 For base- and servo-thread:
 
+[source,hal]
 ----
 loadrt timedelta count=2
 ...
@@ -104,14 +105,14 @@ Example for CPU3 isolated: `GRUB_CMDLINE_LINUX_DEFAULT="isolcpus=managed_irq,dom
 ** sysctl parameters are set in `/etc/sysctl.d/50-linuxcnc-rt.conf`
 ** `sudo update-grub` updates the grub configuration, reboot
 * Test latency
-* Try and error until it works. Ideally, only one parameter at a time is changed. Some settings can make
+* Trial and error until it works. Ideally, only one parameter at a time is changed. Some settings can make
 latency worse and if you set multiple at once, it might well be that you miss the ideal parameter due to an other one makes everything worse.
 
 [[sec:latency-scripts]]
 == Automated scripts
 
 These scripts should allow to achieve good realtime performance by setting general parameters. However, due to
-sheer amount of existing hardware, manual adjustment might be needed.
+the sheer amount of existing hardware, manual adjustment might be needed.
 
 realtime-config-kernel::
 This scripts creates a kernel command line and adds sysctl settings that should achieve good latency for most x86
@@ -140,7 +141,7 @@ as a `post-up` command. The following settings are performed:
 
 PC BIOSes vary wildly in their latency behavior.
 
-Some settings can be modified in BIOS and also using the kernel command
+Some settings can be modified in the BIOS and also using the kernel command
 line. For example "turbo" mode and Hyper-Threading can also be disabled using
 `cpufreq.off=1` and `nosmt`.
 
@@ -202,9 +203,9 @@ disabled. If you prefer to leave SMT enabled due to performance reasons, the SMT
 sibling is isolated also.
 
 [[sec:tuning-preempt-rt]]
-== Tuning Preempt-RT for latency
+== Tuning PREEMPT_RT for latency
 
-The Preempt-RT kernel may benefit from tuning in order to provide the
+The PREEMPT_RT kernel may benefit from tuning in order to provide the
 best latency for LinuxCNC.  Tuning may be done via the kernel command
 line, sysctl, and via files in `/proc` and `/sys`.
 

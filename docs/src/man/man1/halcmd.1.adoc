@@ -81,7 +81,7 @@ Administrators who wish to restrict which users can load these
 **LinuxCNC**-related kernel modules can do this by setting the permissions
 and group on *linuxcnc_module_helper* appropriately.
 
-In systems with userspace-based realtime support (e.g. Preempt-RT) and
+In systems with userspace-based realtime support (e.g. PREEMPT_RT) and
 in systems without realtime support *halcmd* calls the *rtapi_app* which
 creates the realtime environment (simulated realtime, on systems with no
 userspace realtime support) if it did not yet exist, and then loads the

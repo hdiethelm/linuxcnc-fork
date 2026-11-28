@@ -449,7 +449,7 @@ source locations for rt-preempt implementations or by replacing
 the in-tree template file (src/emc/kinematics/userkfuncs.c) for rtai
 systems.
 
-Preempt-rt make example:
+PREEMPT_RT make example:
 
 ----
 $ userkfuncs=/home/myname/kins/mykins.c make && sudo make setuid

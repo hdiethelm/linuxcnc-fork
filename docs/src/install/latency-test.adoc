@@ -231,11 +231,11 @@ image::../config/images/latency-histogram.png["latency-histogram Window"]
 === Latency Ping
 
 The application latency-ping displays a histogram of the round trip time for
-a realtime thread pinging an ip address. This useful for network latency tuning where
-ip_address should be a Mesa card, an EtherCAT device or any other device which
+a realtime thread pinging an ip address. This is useful for network latency tuning where
+`ip_address` should be a Mesa card, an EtherCAT device or any other device which
 has a realtime capable ethernet interface to be used together with LinuxCNC.
 
-Due to ping is used, it should work with virtually any device without any setup.
+It should work with virtually any device without any setup because it utilizes standard ICMP 'ping'.
 
 It is recommended to use the `if_name` argument to allow for static arp, so arp
 renewal is disabled and does not influence the response time.
@@ -288,7 +288,7 @@ CPU governor::
 isolcpus::
     Whether any CPUs are isolated for the exclusive use of LinuxCNC
     (`isolcpus=...`) or not (`no_isolcpus`). Isolating a CPU keeps other tasks
-    off it and improves latency; see <<sec:tuning-preempt-rt,Tuning Preempt-RT
+    off it and improves latency; see <<sec:tuning-preempt-rt,Tuning PREEMPT_RT
     for latency>>.
 
 

@@ -56,7 +56,7 @@ uname -r
 ----
 
 If you see (as above) `-rt-` in the kernel name then you are running the
-preempt-rt kernel and should install the "uspace" version of LinuxCNC.
+PREEMPT_RT kernel and should install the "uspace" version of LinuxCNC.
 You should also install uspace for "sim" configs on non-realtime kernels.
 
 If you see `-rtai-` in the kernel name then you are running RTAI realtime.
@@ -115,7 +115,7 @@ Debian uses the Synaptic Package Manager.
 * Open Synaptic using the instructions in <<_setting_apt_sources,Setting apt sources>> above.
 * Click the `Reload` button.
 * Use the Search function to search for `linuxcnc`.
-* The package is called "linuxcnc" for RTAI kernels and "linuxcnc-uspace" for preempt-rt.
+* The package is called "linuxcnc" for RTAI kernels and "linuxcnc-uspace" for PREEMPT_RT.
 * Click the check box to mark the new linuxcnc and linuxcnc-doc-* packages for upgrade.
   The package manager may select a number of additional packages to be installed,
   to satisfy dependencies that the new linuxcnc package has.
@@ -145,7 +145,7 @@ Codename:       trixie
 ----
 
 Pick the OS from the list then pick the major version you want like
-2.9-rt for RTAI or 2.9-uspace for preempt-rt.
+2.9-rt for RTAI or 2.9-uspace for PREEMPT_RT.
 
 Next pick the type of computer you have: binary-amd64 for 64-bit PC or
 binary-arm64 (64bit) for Raspberry Pi.

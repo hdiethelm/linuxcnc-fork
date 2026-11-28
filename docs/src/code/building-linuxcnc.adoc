@@ -126,9 +126,9 @@ RTAI::
 Xenomai::
   From https://xenomai.org. You will have to compile or obtain a Xenomai kernel yourself.
 
-Preempt-RT::
+PREEMPT_RT::
   From https://rt.wiki.kernel.org.
-  A Linux kernel with the Preempt-RT patch is occasionally available from the Debian archive at https://www.debian.org, and from the wayback machine at https://snapshot.debian.org.
+  A Linux kernel with the PREEMPT_RT patch is occasionally available from the Debian archive at https://www.debian.org, and from the wayback machine at https://snapshot.debian.org.
 
 Non-realtime::
   LinuxCNC can also be built and run on non-realtime platforms,
@@ -178,7 +178,7 @@ The most commonly used arguments are:
 
 `--with-realtime=uspace`::
   Build for any realtime platform, or for non-realtime.
-  The resulting LinuxCNC executables will run on both a Linux kernel with Preempt-RT patches (providing realtime machine control) and
+  The resulting LinuxCNC executables will run on both a Linux kernel with PREEMPT_RT patches (providing realtime machine control) and
   on a vanilla (un-patched) Linux kernel (providing G-code simulation but no realtime machine control).
 
   If development files are installed for Xenomai (typically from package libxenomai-dev) or RTAI (typically from a package with a name starting "rtai-modules"),
@@ -383,7 +383,7 @@ The regular values for this argument are:
   Skip building documentation.
 
 `uspace`::
-  Configure the Debian package for Preempt-RT realtime or for non-realtime (these two are compatible).
+  Configure the Debian package for PREEMPT_RT realtime or for non-realtime (these two are compatible).
 
 `noauto`::
 `rtai`::
@@ -549,7 +549,7 @@ LinuxCNC tries to improve its realtime latency by locking the memory it uses int
 It does this in order to prevent the operating system from swapping LinuxCNC out to disk, which would have bad effects on latency.
 Normally, locking memory into RAM is frowned upon, and the operating system places a strict limit on how much memory a user is allowed to have locked.
 
-When using the Preempt-RT realtime platform LinuxCNC runs with enough privilege to raise its memory lock limit itself.
+When using the PREEMPT_RT realtime platform LinuxCNC runs with enough privilege to raise its memory lock limit itself.
 When using the RTAI realtime platform it does not have enough privilege, and the user must raise the memory lock limit.
 
 If LinuxCNC displays the following message on startup, the problem is your system's configured limit on locked memory:

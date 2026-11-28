@@ -131,7 +131,7 @@ chapter, we only use the HAL API as defined in include/hal.h.
 
 === Motion Controller Modules
 
-The realtime functions of the motion controller are implemented with realtime modules -- userspace shared objects for Preempt-RT systems or kernel modules for some kernel-mode realtime implementations such as RTAI:
+The realtime functions of the motion controller are implemented with realtime modules -- userspace shared objects for PREEMPT_RT systems or kernel modules for some kernel-mode realtime implementations such as RTAI:
 
 * 'tpmod' - trajectory planning
 * 'homemod' - homing functions

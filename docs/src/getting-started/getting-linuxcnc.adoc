@@ -11,7 +11,7 @@ If you have an existing install that you want to upgrade,
 go to the <<cha:updating-linuxcnc,Updating LinuxCNC>> section instead.
 
 NOTE: To operate machinery LinuxCNC requires a special kernel with real-time extensions. There
-are three possibilities here: preempt-rt, RTAI or Xenomai. In addition there are two versions
+are three possibilities here: PREEMPT_RT, RTAI or Xenomai. In addition there are two versions
 of LinuxCNC which work with these kernels. See the table below for details. However for code
 testing and simulation it is possible to run the `linuxcnc-uspace` application on a stock kernel
 of the distribution.
@@ -218,7 +218,7 @@ To see if your computer is suitable for software step pulse generation
 run the Latency Test as shown <<sec:latency-test,here>>.
 
 At the time of writing the Live Image is only available with the
-preempt-rt kernel and a matching LinuxCNC. On some hardware this might
+PREEMPT_RT kernel and a matching LinuxCNC. On some hardware this might
 not offer good enough latency. There is an experimental version available
 using the RTAI realtime kernel which will often give better latency.
 
@@ -258,19 +258,19 @@ In addition, for experienced users who are familiar with Debian system administr
 [options="header"]
 |===
 | Distribution    | Architecture  | Kernel     | Package name    | Typical use
-| Debian Trixie   | amd64 & arm64 | preempt-rt | linuxcnc-uspace | machine control & simulation
+| Debian Trixie   | amd64 & arm64 | PREEMPT_RT | linuxcnc-uspace | machine control & simulation
 | Debian Trixie   | amd64         | RTAI       | linuxcnc        | machine control
-| Debian Bookworm | amd64 & arm64 | preempt-rt | linuxcnc-uspace | machine control & simulation
+| Debian Bookworm | amd64 & arm64 | PREEMPT_RT | linuxcnc-uspace | machine control & simulation
 | Debian Bookworm | amd64         | RTAI       | linuxcnc        | machine control
-| Debian Bullseye | amd64         | preempt-rt | linuxcnc-uspace | machine control & simulation
+| Debian Bullseye | amd64         | PREEMPT_RT | linuxcnc-uspace | machine control & simulation
 | Any             | Any           | Stock      | linuxcnc-uspace | simulation ONLY
 |===
 
 NOTE: LinuxCNC v2.9 is not supported on Debian 9 or older.
 
-.Preempt-RT kernels
+.PREEMPT_RT kernels
 
-The Preempt-rt kernels are available for Debian from the regular debian.org archive.
+The PREEMPT_RT kernels are available for Debian from the regular debian.org archive.
 The package is called `linux-image-rt-*`.
 Simply install the package in the same way as any other package from the
 Synaptic Package manager or with apt-get at the command-line.
@@ -288,7 +288,7 @@ The apt source is:
 LinuxCNC and the RTAI kernel are now only available for 64-bit OSes but
 there are very few surviving systems that can not run a 64-bit OS.
 
-=== Installing on Debian Trixie (with Preempt-RT kernel)
+=== Installing on Debian Trixie (with PREEMPT_RT kernel)
 
 . Install Debian Trixie (Debian 13), amd64 version.
   You can download the installer here:
@@ -313,7 +313,7 @@ NOTE: It is possible to download a version of LinuxCNC directly from Debian
 (currently version 2.9.4) but a more up-to-date version (2.9.8) can
 be installed from the LinuxCNC repository. 
 
-. Install the Preempt-RT kernel and modules
+. Install the PREEMPT_RT kernel and modules
 +
 ----
 sudo apt-get install linux-image-rt-amd64
